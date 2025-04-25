@@ -24,7 +24,7 @@
             "tag": "location",
             "patterns": ["Where are you located?", "Where do you live?", "Your location"],
             "responses": ["I'm a virtual assistant, so I exist in the digital world!", "I don't have a physical location, but I'm here to help you online."]
-        }
+        },
         {
             "tag": "thanks",
             "patterns": ["Thanks", "Thank you", "That's helpful", "Thanks for your help"],

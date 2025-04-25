@@ -1,0 +1,50 @@
+{
+    "intents": [
+        {
+            "tag": "greeting",
+            "patterns": ["Hi", "Hello", "Is anyone there?", "Good day", "Hey", "What's up?", "Greetings"],
+            "responses": ["Hello! How can I assist you today?", "Hi there! How can I help you?", "Greetings! What can I do for you?"]
+        },
+        {
+            "tag": "goodbye",
+            "patterns": ["Bye", "See you later", "Goodbye", "Take care", "See ya"],
+            "responses": ["Goodbye! Have a great day!", "See you later! Take care!", "Bye! Hope to see you again soon!"]
+        },
+        {
+            "tag": "name",
+            "patterns": ["What is your name?", "Who are you?", "Tell me your name", "Your name"],
+            "responses": ["I'm a chatbot here to assist you with train ticket information.", "You can call me TrainChat!", "I'm your virtual assistant for train tickets."]
+        },
+        {
+            "tag": "age",
+            "patterns": ["How old are you?", "What is your age?", "Tell me your age", "Your age"],
+            "responses": ["I don't have an age like humans do, but I'm always learning!", "Age is just a number! I'm here to help you."]
+        },
+        {
+            "tag": "location",
+            "patterns": ["Where are you located?", "Where do you live?", "Your location"],
+            "responses": ["I'm a virtual assistant, so I exist in the digital world!", "I don't have a physical location, but I'm here to help you online."]
+        }
+        {
+            "tag": "thanks",
+            "patterns": ["Thanks", "Thank you", "That's helpful", "Thanks for your help"],
+            "responses": ["You're welcome!", "No problem! Glad I could help.", "Anytime! Let me know if you need anything else."]
+        },
+        {
+            "tag": "noanswer",
+            "patterns": [],
+            "responses": ["Sorry, I didn't understand that.", "Could you please rephrase?", "I'm not sure how to respond to that."]
+        }
+        ,
+        {
+            "tag": "options",
+            "patterns": ["What can you do?", "Help", "Commands", "Options"],
+            "responses": ["I can assist with finding the cheapest train tickets!", "I'm here to help you with train ticket information. Just ask!"]
+        },
+        {
+            "tag": "search_for_cheapest_train_tickets",
+            "patterns": ["Let's get booking", "Find the cheapest train tickets", "Search for cheap train tickets", "Cheapest train tickets", "Find me a train ticket", "Train ticket", "Book a train ticket", "I want to go somewhere", "Search for train tickets"],
+            "responses": ["Please provide the departure and arrival locations, as well as the date of travel.", "What are your travel details for finding the cheapest tickets?"]
+        }
+    ]
+}

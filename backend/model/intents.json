@@ -2,7 +2,7 @@
     "intents": [
         {
             "tag": "greeting",
-            "patterns": ["Hi", "Hello", "Is anyone there?", "Good day", "Hey", "What's up?", "Greetings"],
+            "patterns": ["Hi", "Hello", "Is anyone there?", "Good day", "Hey", "What's up?", "Greetings", "Howdy"],
             "responses": ["Hello! How can I assist you today?", "Hi there! How can I help you?", "Greetings! What can I do for you?"]
         },
         {
@@ -32,7 +32,7 @@
         },
         {
             "tag": "noanswer",
-            "patterns": [],
+            "patterns": [" ", ""],
             "responses": ["Sorry, I didn't understand that.", "Could you please rephrase?", "I'm not sure how to respond to that."]
         }
         ,
@@ -42,9 +42,19 @@
             "responses": ["I can assist with finding the cheapest train tickets!", "I'm here to help you with train ticket information. Just ask!"]
         },
         {
-            "tag": "search_for_cheapest_train_tickets",
-            "patterns": ["Let's get booking", "Find the cheapest train tickets", "Search for cheap train tickets", "Cheapest train tickets", "Find me a train ticket", "Train ticket", "Book a train ticket", "I want to go somewhere", "Search for train tickets"],
-            "responses": ["Please provide the departure and arrival locations, as well as the date of travel.", "What are your travel details for finding the cheapest tickets?"]
+            "tag": "new_search",
+            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search"],
+            "responses": ["Sure! Let's start fresh. What do you need help with?", "Alright! Starting a new search. What can I assist you with?"]
+        },
+        {
+            "tag": "date",
+            "patterns": ["On Monday", "On Tuesday", "On Wednesday", "On Thursday", "On Friday", "On Saturday", "On Sunday", "Next Monday", "Next Tuesday", "Next Wednesday", "Next Thursday", "Next Friday", "Next Saturday", "Next Sunday", "Tomorrow", "Today", "In X days", "In X weeks", "On 01/01/2025", "On 01-01-2025", "On 2025-01-01", "On 2025/01/01", "On X 1st, 2025", "On X 2nd, 2025", "On X 3, 2025"],
+            "responses": []
+        },
+        {
+            "tag": "get_from_x_to_y_date",
+            "patterns": ["I want to go from X to Y on Z", "I wanna get from X to Y on Z", "Get me tickets from X to Y on Z", "Find tickets from X to Y on Date", "Search for tickets from X to Y on Date", "Book tickets from X to Y on Z", "I want to depart from X and will get to Y on Z", "I will be leaving from from X to go to Y on Z"],
+            "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
         }
     ]
 }

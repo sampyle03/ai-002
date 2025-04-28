@@ -8,6 +8,15 @@ import numpy as np
 import os
 import random
 import json
+import csv
+import dateparser
+from dateparser.search import search_dates
+from datetime import datetime
+import string
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from nltk.util import ngrams
 
 # nltk.download('punkt_tab')
 LEMMATIZER = nltk.stem.WordNetLemmatizer()
@@ -39,11 +48,16 @@ class ChatbotAssistant:
         self.vocab = []
         self.intents = []
         self.intents_responses = {}
+        self.previous_intents = []
+        self.previous_responses = []
 
         self.function_mappings = function_mappings
 
         self.X = None
         self.y = None
+
+        self.required_slots = {"get_from_x_to_y_date": ["departure", "destination", "date"]}
+        self.current_slots = {"departure": None, "destination": None, "date": None}
 
     @staticmethod
     def tokenize_and_lemmatize(text):
@@ -71,7 +85,27 @@ class ChatbotAssistant:
                     self.documents.append((pattern_words, intent["tag"]))
 
             self.vocab = sorted(set(self.vocab))
-             
+
+    def load_stations(self, path):
+        regex_pattern = f"[{re.escape(string.punctuation)}]" # https://docs.vultr.com/python/examples/remove-punctuations-from-a-string
+        self.stations = []
+        with open(path) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row["longname.name_alias"].lower() != "\\n":
+                    self.stations.append(re.sub(regex_pattern, "", row["longname.name_alias"].replace(" Rail Station", "")))
+                else:
+                    self.stations.append(re.sub(regex_pattern, "", row["name"]))
+        
+        self.letter_vectorizer = TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(2,4)
+        )
+        stations_lower = [station.lower() for station in self.stations]
+        self.letter_vectorizer.fit(stations_lower)
+        self.stations_matrix = self.letter_vectorizer.transform(stations_lower)
+
+
     def prepare_data(self):
         bags = []
         indices = []
@@ -127,27 +161,154 @@ class ChatbotAssistant:
         self.model = ChatbotModel(dimensions["input_size"], dimensions["output_size"])
         self.model.load_state_dict(torch.load(model_path, weights_only=True))
 
+    def extract_stations(self, message, predicted_intent):
+        regex_pattern = f"[{re.escape(string.punctuation)}]" # https://docs.vultr.com/python/examples/remove-punctuations-from-a-string
+        message = re.sub(regex_pattern, "", message.lower().replace(" rail station", "").replace("rail station", "").replace(" station", "").replace("station", "")).split()
+
+        message_2grams = [(i, tuple(message[i:i+2])) for i in range(len(message)-1)]
+        message_3grams = [(i, tuple(message[i:i+3])) for i in range(len(message)-2)]
+        message_4grams = [(i, tuple(message[i:i+3])) for i in range(len(message)-3)]
+
+        min_2gram_cosine_score = 0.81
+        min_3gram_cosine_score = 0.71
+        min_4gram_cosine_score = 0.6
+        most_similar_stations = []
+        while len(most_similar_stations) < 3 or min_2gram_cosine_score < 0.6:
+            for start_idx, gram in message_2grams:
+                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                scores = cosine_similarity(vec, self.stations_matrix).flatten()
+                for station_idx, sim in enumerate(scores):
+                    if sim > min_2gram_cosine_score:
+                        most_similar_stations.append((
+                            self.stations[station_idx],
+                            sim,
+                            start_idx,
+                            1
+                        ))
+            for start_idx, gram in message_3grams:
+                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                scores = cosine_similarity(vec, self.stations_matrix).flatten()
+                for station_idx, sim in enumerate(scores):
+                    if sim > min_3gram_cosine_score:
+                        most_similar_stations.append((
+                            self.stations[station_idx],
+                            sim,
+                            start_idx,
+                            1
+                        ))
+            for start_idx, gram in message_4grams:
+                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                scores = cosine_similarity(vec, self.stations_matrix).flatten()
+                for station_idx, sim in enumerate(scores):
+                    if sim > min_4gram_cosine_score:
+                        most_similar_stations.append((
+                            self.stations[station_idx],
+                            sim,
+                            start_idx,
+                            1
+                        ))
+            min_2gram_cosine_score -= 0.01
+            min_3gram_cosine_score -= 0.02
+            min_4gram_cosine_score -= 0.03
+        possible_stations = {}
+        for name, sim, pos, w in most_similar_stations:
+            sum_sim, sum_posw, sum_w = possible_stations.get(name, (0,0,0))
+            possible_stations[name] = (sum_sim + sim, sum_posw + pos*w, sum_w + w)
+        results = []
+        for name, (sum_sim, sum_posw, sum_w) in possible_stations.items():
+            avg_sim = sum_sim / sum_w
+            avg_pos = sum_posw / sum_w
+            results.append((name, avg_sim, avg_pos))
+        first_station = results[0]
+        second_station = results[-1]
+
+        if len(possible_stations) < 2:
+            return None
+        if (abs(first_station[2]-second_station[2]) < 1):
+            return False, [first_station[0], second_station[0]]
+
+        if predicted_intent in ("get_from_x_to_y", "get_from_x_to_y_date"):
+            departure, destination = first_station[0], second_station[0]
+        else:  # reversed intent
+            departure, destination = second_station[0], first_station[0]
+
+        # get the position in the message of each statement, use the predicted intent to return which station is the departure and which is the destination
+        if predicted_intent == "get_from_x_to_y_date" or predicted_intent == "get_from_x_to_y":
+            return True, [departure, destination]
+            
+
+
+
+
+    def extract_date(self, text):
+        text = text.replace("on", "this")
+        dt = search_dates(text, settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now(), "SKIP_TOKENS": ["to", "from", "rail", "station", "travel"]})
+        return dt[0][1].date().isoformat() if dt else None
+
     def process_message(self, input_message):
         words = self.tokenize_and_lemmatize(input_message)
         bag = self.bag_of_words(words)
 
+        # Predict intent of message
         bag_tensor = torch.tensor([bag], dtype=torch.float32)
-
         self.model.eval()
         with torch.no_grad():
             predictions = self.model(bag_tensor)
-
         predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
 
-        if self.function_mappings:
-            if predicted_intent in self.function_mappings:
-                self.function_mappings[predicted_intent]() # Call function for the predicted intent (e.g. call the function searchForCheapestTrain(departureLoc, destinationLoc, time, railcard))
+        if predicted_intent in self.required_slots:
+            success, stations = self.extract_stations(input_message, predicted_intent)
+            print(stations)
+            if stations:
+                if not success:
+                    if not self.current_slots["departure"] and not self.current_slots["destination"]:
+                        message = "It seems like you mentioned one of "
+                        while len(stations) > 2:
+                            message += stations.pop() + ", "
+                        if len(stations) == 2:
+                            message += stations.pop() + " and "
+                        if len(stations) == 1:
+                            message += stations.pop()
+                        self.previous_responses.append("specify_which_station")
+                        return(f"{message}. Please specify which of these you mean.")
+                    elif not self.current_slots["departure"]:
+                        self.current_slots["departure"] = stations[0]
+                    elif not self.current_slots["destination"]:
+                        self.current_slots["departure"] = stations[0]
+                if not self.current_slots["departure"]:
+                    self.current_slots["departure"] = stations[0]
+                if not self.current_slots["destination"] and len(stations) > 1:
+                    self.current_slots["destination"] = stations[1]
+            else:
+                return random.choice(["I'm not too sure what specific stations you mean! Could you clarify?", "Could you specify which stations you mean?"])
+        
+            date = self.extract_date(input_message)
+            if date:
+                self.current_slots["date"] = date
+            
+            unfilled_slots = []
+            for slot in self.required_slots[predicted_intent]:
+                if not self.current_slots[slot]:
+                    unfilled_slots.append(slot)
+            message = "Sure! Just tell me your "
+            while len(unfilled_slots) > 2:
+                message += unfilled_slots.pop() + ", "
+            if len(unfilled_slots) == 2:
+                message += unfilled_slots.pop() + " and "
+            if len(unfilled_slots) == 1:
+                return message + unfilled_slots.pop() + "."
 
-        if self.intents_responses[predicted_intent]:
-            return random.choice(self.intents_responses[predicted_intent])
-        else:
-            return None
+            departure = self.current_slots["departure"]
+            destination = self.current_slots["destination"]
+            date = self.current_slots["date"]
+            result = self.function_mappings[predicted_intent](departure, destination, date)
+
+            self.current_slots = {s: None for s in self.current_slots}
+            return result
+        
+        return random.choice(self.intents_responses[predicted_intent])
+
             
 def searchForCheapestTrain(departureLoc, destinationLoc, time, railcard=None):
     """
@@ -156,14 +317,15 @@ def searchForCheapestTrain(departureLoc, destinationLoc, time, railcard=None):
     Returns: str - The cheapest train information.
     """
 
-    return "Searching..."
+    return f"Searching from {departureLoc} to {destinationLoc} on {time}..."
 
 if __name__ == "__main__":
     intents_path = os.path.join(os.path.dirname(__file__), "intents.json")
-    assistant = ChatbotAssistant(intents_path, function_mappings={"search_for_cheapest_train_tickets": searchForCheapestTrain})
+    assistant = ChatbotAssistant(intents_path, function_mappings={"get_from_x_to_y_date": searchForCheapestTrain})
     assistant.parse_intents()
+    assistant.load_stations(os.path.join(os.path.dirname(__file__), "../data/stations.csv"))
     assistant.prepare_data()
-    assistant.train_model(batch_size=8, lr=0.001, epochs=1000)
+    assistant.train_model(batch_size=8, lr=0.001, epochs=300)
     assistant.save_model("model.pth", "dimensions.json")
 
     print("\n\n\n\nTime to chat! Type 'exit' to quit.\n")

@@ -22,7 +22,11 @@ app.get('/', (req, res) => {
     });
 });
 
-
+app.post('/chat', (req,res) => {
+    message = req.body
+    console.log(message)
+    res.send(message)
+});
 
 app.listen(port, () => {
     console.log(`My app listening on port http://localhost:${port}`)

@@ -5,12 +5,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const UserInput = document.getElementById("user-input");
     const ChatContainer = document.querySelector(".chat-container");
 
-    form.addEventListener("submit", async (e) => {
+    UserInputForm.addEventListener("submit", async (e) => {
         //Stops the page from reloading when the form submits
         e.preventDefault();
         
         //Returns if there is no actual message
-        const userMessage = input.value;
+        const userMessage = UserInput.value;
         if (userMessage === "") return;
 
         //Appends user's message to chat
@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ChatContainer.appendChild(p)
         
         //Resets the input field text box
-        input.value = "";
+        UserInput.value = "";
         //Auto scrolls the new message to the top of the screen (like on chatgpt)
         ChatContainer.scrollTop = ChatContainer.scrollHeight;
         
@@ -35,13 +35,15 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const ResponseData = await response.json();
-            const Reply = ResponseData.reply || "No response received.";
+            console.log(ResponseData.message)
+            const Reply = ResponseData.message || "No response received.";
 
             // Append bot's message to chat
             const p = document.createElement("p");
             p.className = `chat-message ai-chat-message`;
             p.textContent = Reply;
             ChatContainer.appendChild(p)
+            
             //Auto scrolls the new message to the top of the screen (like on chatgpt)
             ChatContainer.scrollTop = ChatContainer.scrollHeight;
 

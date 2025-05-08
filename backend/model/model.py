@@ -223,7 +223,7 @@ class ChatbotAssistant:
         second_station = results[-1]
 
         if len(possible_stations) < 2:
-            return None
+            return None, None
         if (abs(first_station[2]-second_station[2]) < 1):
             return False, [first_station[0], second_station[0]]
 
@@ -258,7 +258,6 @@ class ChatbotAssistant:
         predicted_intent = self.intents[predicted_class_index]
 
         if predicted_intent in self.required_slots:
-            print(self.extract_stations(input_message, predicted_intent))
             success, stations = self.extract_stations(input_message, predicted_intent)
             print(stations)
             if stations:

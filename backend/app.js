@@ -22,12 +22,27 @@ app.get('/', (req, res) => {
     });
 });
 
-app.post('/chat', (req,res) => {
-    message = req.body
-    console.log(message)
-    res.send(message)
-});
-
 app.listen(port, () => {
     console.log(`My app listening on port http://localhost:${port}`)
+});
+
+async function sendMessage(text) {
+    const res = await fetch("http://localhost:5000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+    });
+    const { reply } = await res.json();
+    return reply;
+}
+
+app.post('/chat', (req,res) => {
+    message = req.body
+    reply = sendMessage(message.message)
+    reply.then((data) => {
+        res.json({ message: data });
+    }).catch((error) => {
+        console.error("Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    });
 });

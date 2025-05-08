@@ -258,6 +258,7 @@ class ChatbotAssistant:
         predicted_intent = self.intents[predicted_class_index]
 
         if predicted_intent in self.required_slots:
+            print(self.extract_stations(input_message, predicted_intent))
             success, stations = self.extract_stations(input_message, predicted_intent)
             print(stations)
             if stations:

@@ -1,1 +1,43 @@
 /* index.css */
+html {
+    background-color: rgb(200, 203, 207);
+}
+
+body {
+    font-family: 'Courier New', Courier, monospace;
+    margin: 0;
+    padding: 0;
+    background-color: rgb(200, 203, 207);
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+}
+
+chat-container {
+
+}
+
+chat-message {
+
+}
+
+ai-chat-message {
+
+}
+
+user-chat-message {
+
+}
+
+input-container {
+
+}
+
+user-input {
+
+}
+
+send-button {
+    
+}

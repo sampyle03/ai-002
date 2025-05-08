@@ -42,6 +42,40 @@ body {
     padding-right: 10px;
 }
 
+#chat-form-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 600px;
+    margin-top: 10px;
+}
+
+#chat-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+#user-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid black;
+    border-radius: 5px;
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+#chat-form button {
+    background-color: rgb(0, 123, 255);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
 user-chat-message {
 
 }

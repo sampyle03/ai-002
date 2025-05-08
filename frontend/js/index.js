@@ -34,9 +34,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ message: userMessage }),
             });
 
+            //Until a response is gotten, display a loading icon in the window
+            const loading = document.createElement("img")
+            loading.src = "../images/KmNL43wi3g.gif";
+            loading.style = "width:25px;height:25px;";
+
+
             const ResponseData = await response.json();
             console.log(ResponseData.message)
             const Reply = ResponseData.message || "No response received.";
+
+            //Deletes the loading gif before displaying the response message
+            loading.remove();
 
             // Append bot's message to chat
             const p = document.createElement("p");

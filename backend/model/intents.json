@@ -43,17 +43,17 @@
         },
         {
             "tag": "new_search",
-            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search"],
+            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "I wanna book a train", "Help me book a train please"],
             "responses": ["Sure! Let's start fresh. What do you need help with?", "Alright! Starting a new search. What can I assist you with?"]
         },
         {
             "tag": "date",
             "patterns": ["On Monday", "On Tuesday", "On Wednesday", "On Thursday", "On Friday", "On Saturday", "On Sunday", "Next Monday", "Next Tuesday", "Next Wednesday", "Next Thursday", "Next Friday", "Next Saturday", "Next Sunday", "Tomorrow", "Today", "In X days", "In X weeks", "On 01/01/2025", "On 01-01-2025", "On 2025-01-01", "On 2025/01/01", "On X 1st, 2025", "On X 2nd, 2025", "On X 3, 2025"],
-            "responses": []
+            "responses": ["Ok! Let's see..."]
         },
         {
             "tag": "get_from_x_to_y_date",
-            "patterns": ["I want to go from X to Y on Z", "I wanna get from X to Y on Z", "Get me tickets from X to Y on Z", "Find tickets from X to Y on Date", "Search for tickets from X to Y on Date", "Book tickets from X to Y on Z", "I want to depart from X and will get to Y on Z", "I will be leaving from from X to go to Y on Z"],
+            "patterns": ["I want to go from X to Y on Monday", "I want to go from X to Y on Tuesday", "I want to go from X to Y on Wednesday", "I want to go from X to Y on Thursday", "I want to go from X to Y on Friday", "I want to go from X to Y on Saturday", "I want to go from X to Y on Sunday", "I wanna get from X to Y on Z", "Get me tickets from X to Y on Z", "Find tickets from X to Y on Date", "Search for tickets from X to Y on Date", "Book tickets from X to Y on Z", "I want to depart from X and will get to Y on Z", "I will be leaving from from X to go to Y on Z", "from X to Y on Z"],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
         }
     ]

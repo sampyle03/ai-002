@@ -36,9 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             //Until a response is gotten, display a loading icon in the window
             const loading = document.createElement("img")
+            loading.className = `chat-message ai-chat-message`;
             loading.src = "../images/KmNL43wi3g.gif";
             loading.style = "width:25px;height:25px;";
-
+            ChatContainer.appendChild(loading);
 
             const ResponseData = await response.json();
             console.log(ResponseData.message)
@@ -55,7 +56,6 @@ document.addEventListener("DOMContentLoaded", () => {
             
             //Auto scrolls the new message to the top of the screen (like on chatgpt)
             ChatContainer.scrollTop = ChatContainer.scrollHeight;
-
         } catch (error) {
             //console.error("Error communicating with the server:", error);
             alert("Error communicating with the server:",error)

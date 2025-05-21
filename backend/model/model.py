@@ -93,7 +93,7 @@ class ChatbotAssistant:
     def load_stations(self, path):
         regex_pattern = f"[{re.escape(string.punctuation)}]" # https://docs.vultr.com/python/examples/remove-punctuations-from-a-string
         self.stations = []
-        with open(path) as f:
+        with open(path) as f: # open stations.csv
             reader = csv.DictReader(f)
             for row in reader:
                 if row["longname.name_alias"].lower() != "\\n":
@@ -101,13 +101,21 @@ class ChatbotAssistant:
                 else:
                     self.stations.append(re.sub(regex_pattern, "", row["name"]))
         
-        self.letter_vectorizer = TfidfVectorizer(
-            analyzer="char_wb",
-            ngram_range=(2,4)
-        )
+        self.letter_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4))
         stations_lower = [station.lower() for station in self.stations]
         self.letter_vectorizer.fit(stations_lower)
         self.stations_matrix = self.letter_vectorizer.transform(stations_lower)
+    
+    def load_railcards(self, path):
+        self.railcards = []
+        with open(path) as f: # open railcards.txt
+            for line in f:
+                self.railcards.append(line.split(" : ")[0])
+
+        railcards_lower = [railcard.lower() for railcard in self.railcards]
+        self.letter_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4))
+        self.letter_vectorizer.fit(railcards_lower)
+        self.railcards_matrix = self.letter_vectorizer.transform(railcards_lower)
 
 
     def prepare_data(self):
@@ -186,7 +194,6 @@ class ChatbotAssistant:
             for start_idx, word in message_tokens:
                 if word in common_words:
                     continue
-                print(word)
                 vec = self.letter_vectorizer.transform([word])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
@@ -201,7 +208,6 @@ class ChatbotAssistant:
             for start_idx, gram in message_2grams:
                 if gram[0] in common_words or gram[1] in common_words:
                     continue # skip iteration if one of the words found in the gram is a common word
-                print(gram)
                 vec = self.letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
@@ -216,7 +222,6 @@ class ChatbotAssistant:
             for start_idx, gram in message_3grams:
                 if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words:
                     continue # skip iteration if one of the words found in the gram is a common word
-                print(gram)
                 vec = self.letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
@@ -231,7 +236,6 @@ class ChatbotAssistant:
             for start_idx, gram in message_4grams:
                 if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words or gram[3] in common_words:
                     continue # skip iteration if one of the words found in the gram is a common word
-                print(gram)
                 vec = self.letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
@@ -248,26 +252,19 @@ class ChatbotAssistant:
             min_3gram_cosine_score -= 0.01
             min_4gram_cosine_score -= 0.01
             if min_2gram_cosine_score < 0.3 or len(unique_similar_stations) > 2:
-                print(min_2gram_cosine_score)
-                print(len(unique_similar_stations))
-                print("That was why we are stopping")
                 keep_going = False
         possible_stations = {}
         for name, sim, pos, w in most_similar_stations:
             sum_sim, sum_posw, sum_w = possible_stations.get(name, (0,0,0))
             possible_stations[name] = (sum_sim + sim, sum_posw + pos*w, sum_w + w)
-        print(possible_stations)
         results = []
         for name, (total_similarity, total_position, total_weight) in possible_stations.items():
             avg_similarity = total_similarity / total_weight
             avg_position = total_position / total_weight
             results.append((name, avg_similarity, avg_position))
-        print(results)
         found_stations = False
         removed = []
         results.sort(key=lambda x: (x[2], -x[1]))
-        print("results sorted")
-        print(results)
         while not found_stations:
             two_stations = [("station0", 0, 0), ("station1", 0, 0)]
             for possible in results[:]:
@@ -279,8 +276,6 @@ class ChatbotAssistant:
                     two_stations[1] = possible
                 else:
                     results.remove(possible)
-                print(two_stations)
-                input("Press enter to contunue")
             if abs(two_stations[0][2] - two_stations[1][2]) >= 1:
                 found_stations = True
             else:
@@ -313,6 +308,78 @@ class ChatbotAssistant:
         if predicted_intent == "get_from_x_to_y_date" or predicted_intent == "get_from_x_to_y":
             return True, [departure, destination]
             
+    def extract_railcard(self, message):
+        regex_pattern = f"[{re.escape(string.punctuation)}]" # https://docs.vultr.com/python/examples/remove-punctuations-from-a-string
+        message = re.sub(regex_pattern, "", message)
+
+        message_tokens = [(i, word) for i, word in enumerate(message)]
+        message_2grams = [(i, tuple(message[i:i+2])) for i in range(len(message)-1)]
+        message_3grams = [(i, tuple(message[i:i+3])) for i in range(len(message)-2)]
+        message_4grams = [(i, tuple(message[i:i+4])) for i in range(len(message)-3)]
+
+        min_token_cosine_score = 0.92
+        min_2gram_cosine_score = 0.9
+        min_3gram_cosine_score = 0.76
+        min_4gram_cosine_score = 0.7
+        most_similar_railcards = []
+        unique_similar_railcards = set()
+        common_words = set(["i", "wanna", "want", "to", "go", "travel", "from", "to", "destination", "departure", "on", "form", "ot", "the", "a", "at", "must", "have", "and", "with", "this"])
+
+        keep_going = True
+        while keep_going:
+            for start_idx, word in message_tokens:
+                if word in common_words:
+                    continue
+                vec = self.letter_vectorizer.transform([word])
+                scores = cosine_similarity(vec, self.railcards_matrix).flatten()
+                for railcard_idx, sim in enumerate(scores):
+                    if sim > min_token_cosine_score:
+                        most_similar_railcards.append((self.railcards[railcard_idx], sim))
+                        unique_similar_railcards.add(self.railcards[railcard_idx])
+            for start_idx, gram in message_2grams:
+                if gram[0] in common_words or gram[1] in common_words:
+                    continue
+                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                scores = cosine_similarity(vec, self.railcards_matrix).flatten()
+                for railcard_idx, sim in enumerate(scores):
+                    if sim > min_2gram_cosine_score:
+                        most_similar_railcards.append((self.railcards[railcard_idx], sim))
+                        unique_similar_railcards.add(self.railcards[railcard_idx])
+            for start_idx, gram in message_3grams:
+                if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words:
+                    continue
+                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                scores = cosine_similarity(vec, self.railcards_matrix).flatten()
+                for railcard_idx, sim in enumerate(scores):
+                    if sim > min_3gram_cosine_score:
+                        most_similar_railcards.append((self.railcards[railcard_idx], sim))
+                        unique_similar_railcards.add(self.railcards[railcard_idx])
+            for start_idx, gram in message_4grams:
+                if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words or gram[3] in common_words:
+                    continue
+                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                scores = cosine_similarity(vec, self.railcards_matrix).flatten()
+                for railcard_idx, sim in enumerate(scores):
+                    if sim > min_4gram_cosine_score:
+                        most_similar_railcards.append((self.railcards[railcard_idx],sim))
+                        unique_similar_railcards.add(self.railcards[railcard_idx])
+            min_token_cosine_score -= 0.01
+            min_2gram_cosine_score -= 0.01
+            min_3gram_cosine_score -= 0.01
+            min_4gram_cosine_score -= 0.01
+            if min_2gram_cosine_score < 0.3 or len(unique_similar_railcards) > 2:
+                keep_going = False
+        possible_railcards = {}
+        for name, sim in most_similar_railcards:
+            if name in possible_railcards:
+                possible_railcards[name] += sim
+            else:
+                possible_railcards[name] = sim
+        highest = ("abc", -1)
+        for name, sim in possible_railcards.items():
+            if sim > highest[1]:
+                highest = (name, sim)
+        return highest[0]
 
 
 
@@ -334,7 +401,7 @@ class ChatbotAssistant:
         predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
 
-        if predicted_intent in self.required_slots:
+        if predicted_intent in self.required_slots and predicted_intent == "get_from_x_to_y_date":
             success, stations = self.extract_stations(input_message, predicted_intent)
             print(stations)
             if stations:
@@ -404,14 +471,7 @@ if __name__ == "__main__":
     assistant = ChatbotAssistant(intents_path, function_mappings={"get_from_x_to_y_date": searchForCheapestTrain})
     assistant.parse_intents()
     assistant.load_stations(os.path.join(os.path.dirname(__file__), "../data/stations.csv"))
+    assistant.load_railcards(os.path.join(os.path.dirname(__file__), "../data/railcards.txt"))
     assistant.prepare_data()
     assistant.train_model(batch_size=8, lr=0.001, epochs=150)
     assistant.save_model("model.pth", "dimensions.json")
-
-    print("\n\n\n\nTime to chat! Type 'exit' to quit.\n")
-    while True:
-        message = input("You: ")
-        if message.lower() == "exit":
-            break
-
-        print("Assistant:", assistant.process_message(message))

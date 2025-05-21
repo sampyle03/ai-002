@@ -21,10 +21,12 @@ assistant.load_stations(stations_csv)
 def chat():
     data = request.get_json()
     message = data.get("message", "")
+    print(message)
     if not message:
         return jsonify({"error": "No message found"}), 400
     
     reply = assistant.process_message(message)
+    print(reply)
     return jsonify({"reply": reply})
 
 if __name__ == "__main__":

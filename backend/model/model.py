@@ -4,7 +4,6 @@ Chatbot developed using tutorial of https://www.youtube.com/watch?v=a040VmmO-AY&
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 import nltk
@@ -13,7 +12,6 @@ import os
 import random
 import json
 import csv
-import dateparser
 from dateparser.search import search_dates
 from datetime import datetime
 import string
@@ -403,7 +401,6 @@ class ChatbotAssistant:
 
         if predicted_intent in self.required_slots and predicted_intent == "get_from_x_to_y_date":
             success, stations = self.extract_stations(input_message, predicted_intent)
-            print(stations)
             if stations:
                 if not success:
                     if not self.current_slots["departure"] and not self.current_slots["destination"]:
@@ -435,6 +432,8 @@ class ChatbotAssistant:
             for slot in self.required_slots[predicted_intent]:
                 if not self.current_slots[slot]:
                     unfilled_slots.append(slot)
+            if len(unfilled_slots) == 0:
+                self.function_mappings[predicted_intent](departure, destination, date)
             message = "Sure! Just tell me your "
             while len(unfilled_slots) > 2:
                 message += unfilled_slots.pop() + ", "
@@ -451,6 +450,12 @@ class ChatbotAssistant:
             self.current_slots = {s: None for s in self.current_slots}
             return result
         
+        elif predicted_intent in self.required_slots and predicted_intent == "date":
+            date = self.extract_date(input_message)
+            self.current_slots["date"] = date
+
+        
+
         return random.choice(self.intents_responses[predicted_intent])
 
             

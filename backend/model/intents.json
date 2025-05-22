@@ -53,7 +53,28 @@
         },
         {
             "tag": "get_from_x_to_y_date",
-            "patterns": ["I want to go from X to Y on Monday", "I want to go from X to Y on Tuesday", "I want to go from X to Y on Wednesday", "I want to go from X to Y on Thursday", "I want to go from X to Y on Friday", "I want to go from X to Y on Saturday", "I want to go from X to Y on Sunday", "I wanna get from X to Y on Z", "Get me tickets from X to Y on Z", "Find tickets from X to Y on Date", "Search for tickets from X to Y on Date", "Book tickets from X to Y on Z", "I want to depart from X and will get to Y on Z", "I will be leaving from from X to go to Y on Z", "from X to Y on Z"],
+            "patterns": [
+                "I want to go from X to Y on Z", "I want to travel from X to Y on Z", "Can I go from X to Y on Z?", "Book me a ticket from X to Y on Z", "I need to get from X to Y on Z", "Travel from X to Y on Z", "I want to leave X for Y on Z", "I want to visit Y from X on Z", "From X to Y on Z", "Get me from X to Y on Z",
+                "I want to go from X to Y tomorrow", "I want to travel from X to Y next week", "I want to go from X to Y today", "Is there a train from X to Y on Z?", "Are there tickets from X to Y on Z?", "Can I get from X to Y on Z?", "I want to book a train from X to Y on Z", "I need a train from X to Y on Z", "Looking for trains from X to Y on Z", "Find me a train from X to Y on Z",
+                "Show me trains from X to Y on Z", "I want to depart from X and arrive at Y on Z", "I will be leaving from X to go to Y on Z", "Going from X to Y on Z", "Train from X to Y on Z", "Tickets from X to Y on Z", "I want to book from X to Y on Z", "I want to travel to Y from X on Z", "I want to go to Y from X on Z"
+            ],
+            "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
+        },
+        {
+            "tag": "get_from_x_to_y_date_single",
+            "patterns": [
+                "I want to go from X to Y on Z, single ticket", "I want to travel from X to Y on Z, single ticket", "Can I go from X to Y on Z, single ticket?", "Book me a single ticket from X to Y on Z", "I need to get from X to Y on Z, single ticket", "Travel from X to Y on Z, single ticket", "I want to leave X for Y on Z, single ticket", "I want to visit Y from X on Z, single ticket", "From X to Y on Z, single ticket", "Get me from X to Y on Z, single ticket",
+                "I want to go from X to Y tomorrow, single ticket", "I want to travel from X to Y next week, single ticket", "I want to go from X to Y today, single ticket", "Is there a single ticket train from X to Y on Z?", "Are there single tickets from X to Y on Z?", "Can I get from X to Y on Z, one way?", "I want to book a one way ticket from X to Y on Z", "I need a one way ticket from X to Y on Z", "Looking for a one way train from X to Y on Z", "Find me a one way ticket from X to Y on Z",
+                "Show me one way trains from X to Y on Z", "I want to depart from X and arrive at Y on Z, one way", "I will be leaving from X to go to Y on Z, one way", "Going from X to Y on Z, one way", "Train from X to Y on Z, one way", "Tickets from X to Y on Z, one way", "I want to book from X to Y on Z, one way", "I want to travel to Y from X on Z, one way", "I want to go to Y from X on Z, one way"
+            ],
+            "responses": ["Booking a single journey for you!", "Searching for one way tickets from X to Y...", "Ok! Looking for single tickets."]
+        },         
+        {
+            "tag": "get_from_x_to_y_date_return",
+            "patterns": [
+                    "A return","return ticket","to return","return","there and back","and back","I want a return ticket from X to Y leaving on date and returning on date", "Book me a round trip from X to Y, outbound on date and return on date", "Get me from X to Y on date and back on date", "From X to Y on date, coming back on date", "I want to go from X to Y on date and return the same day", "Train from X to Y on date, return on date", "I'd like a return journey from X to Y, leaving on date, returning on date", "Return ticket from X to Y, depart on date, return on date", "I need a round trip from X to Y, leaving on date, coming back on date", "I want to travel from X to Y on Monday and return on Friday",
+                    "From X to Y on Tuesday, back on Thursday", "Can I get a return from X to Y, out on date, back on date", "Return journey from X to Y, leaving on date, returning on date", "Book a return ticket from X to Y, outbound on date, inbound on date", "I want to go from X to Y on date and then return on date", "Round trip from X to Y, depart on date, return on date", "I want to leave X for Y on date and return on date", "Get me a return ticket from X to Y for date, coming back on date"
+                ],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
         }
     ]

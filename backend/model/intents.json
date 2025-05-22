@@ -43,7 +43,7 @@
         },
         {
             "tag": "new_search",
-            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "I wanna book a train", "Help me book a train please"],
+            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "I wanna book a train", "Help me book a train please", "I want to book another ticket", "Help me get a new ticket", "Help me start a new search"],
             "responses": ["Sure! Let's start fresh. What do you need help with?", "Alright! Starting a new search. What can I assist you with?"]
         },
         {
@@ -76,6 +76,44 @@
                     "From X to Y on Tuesday, back on Thursday", "Can I get a return from X to Y, out on date, back on date", "Return journey from X to Y, leaving on date, returning on date", "Book a return ticket from X to Y, outbound on date, inbound on date", "I want to go from X to Y on date and then return on date", "Round trip from X to Y, depart on date, return on date", "I want to leave X for Y on date and return on date", "Get me a return ticket from X to Y for date, coming back on date"
                 ],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
+        },
+        {
+            "tag": "single",
+            "patterns": [
+                "single", "single please", "Just a single"
+            ],
+            "responses": ["Single it is.", "One way ticket", "Cool beans"]
+        },
+        {
+            "tag": "return",
+            "patterns": [
+                "return", "return please", "Just a return", "I would like a return ticket", "round trip", "return"
+            ],
+            "responses": ["Return it is.", "Round trip ticket", "Cool beans"]
+        },
+        {
+            "tag": "no",
+            "patterns": [
+                "no", "no thanks", "not really", "nope", "nah"
+            ],
+            "responses": ["Alright, let me know if you need anything else.", "No problem! If you have any other questions, feel free to ask.", "Got it! If you change your mind, I'm here to help."]
+        },
+        {
+            "tag": "railcard",
+            "patterns": [
+                "16-17 Saver", "16-25 Railcard", "18 Saver - Transport for Wales", "26-30 Railcard", "Annual Gold Card Record Card", "Cambrian Railcard", "Club 50 Web - ScotRail", "Dales Railcard", "Devon & Cornwall Gold Card", "Devon & Cornwall Railcard", "Disabled Persons Railcard", "Esk Valley Railcard", "Family & Friends Railcard", "GroupSave", "Heart of Wales Railcard", "Highland Railcard", "HM Forces Railcard", "Jobcentre Plus Travel Discount Card", "MyCumbria Card", "Network Railcard", "North Lincolnshire Concessionary 34%", "North Lincolnshire Concessionary 50%", "Pembrokeshire Railcard", "Rhondda Railcard", "Senior Railcard", "South Yorkshire 16-18 Zoom Travel Pass", "Student Railcard - Transport for Wales", "Two Together Railcard", "Valleys Senior Railcard", "Valleys Student Railcard", "Veterans Railcard", "West Yorkshire Disabled Concessionary Discount", "West Yorkshire MetroRover Permit", "West Yorkshire Senior Concessionary Discount", "No Railcard", "I don't have a railcard", "Rail card", "Discount Card"
+            ],
+            "responses": ["This railcard will be applied!", "Great! I'll use that!"]
+        },
+        {
+            "tag": "adult_passengers",
+            "patterns": ["One adult passenger ticket", "1 adult please", "Two adult passenger tickets", "2 adults please", "Three adult passenger tickets", "3 adult please", "Four adult passenger tickets", "4 adults please", "Five adult passenger tickets", "5 adult please"],
+            "responses": ["Adult passenger tickets it is!", "Adult tickets coming right up!", "Got it! Adult tickets for you."]
+        },
+        {
+            "tag": "child_passengers",
+            "patterns": ["One child passenger ticket", "1 child please", "Two child passenger tickets", "2 children please", "Three child passenger tickets", "3 children please", "Four child passenger tickets", "4 children please", "Five child passenger tickets", "5 children please"],
+            "responses": ["Child passenger tickets it is!", "Child tickets coming right up!", "Got it! Child tickets for you."]
         }
     ]
 }

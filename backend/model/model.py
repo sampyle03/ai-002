@@ -14,11 +14,13 @@ import json
 import csv
 from dateparser.search import search_dates
 from datetime import datetime
+from datetime import date
 import string
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.util import ngrams
+from scraper import TicketFinder
 
 # nltk.download('punkt_tab')
 LEMMATIZER = nltk.stem.WordNetLemmatizer()
@@ -58,8 +60,10 @@ class ChatbotAssistant:
         self.X = None
         self.y = None
 
-        self.required_slots = {"get_from_x_to_y_date": ["departure", "destination", "date"]}
-        self.current_slots = {"departure": None, "destination": None, "date": None}
+        self.required_slots = {"departure", "destination", "date", "type"}
+        self.required_slots_single = {"departure", "destination", "date", "type"}
+        self.required_slots_return = {"departure", "destination", "date", "type", "return date"}
+        self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
 
     @staticmethod
     def tokenize_and_lemmatize(text):
@@ -297,13 +301,13 @@ class ChatbotAssistant:
             else:
                 return False, [first_station[0], None]
 
-        if predicted_intent in ("get_from_x_to_y", "get_from_x_to_y_date"):
+        if predicted_intent in ("get_from_x_to_y", "get_from_x_to_y_date", "get_from_x_to_y_date_single", "get_from_x_to_y_date_return"):
             departure, destination = first_station[0], second_station[0]
         else:  # reversed intent
             departure, destination = second_station[0], first_station[0]
 
         # get the position in the message of each statement, use the predicted intent to return which station is the departure and which is the destination
-        if predicted_intent == "get_from_x_to_y_date" or predicted_intent == "get_from_x_to_y":
+        if predicted_intent == "get_from_x_to_y_date" or predicted_intent == "get_from_x_to_y" or predicted_intent == "get_from_x_to_y_date_single" or predicted_intent == "get_from_x_to_y_date_return":
             return True, [departure, destination]
             
     def extract_railcard(self, message):
@@ -385,8 +389,14 @@ class ChatbotAssistant:
     def extract_date(self, text):
         text = text.replace("on", "this")
         dt = search_dates(text, settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now(), "SKIP_TOKENS": ["to", "from", "rail", "station", "travel"]})
-        return dt[0][1].date().isoformat() if dt else None
-
+        if not dt:
+            return []
+        #Sorts the dates by time
+        dates = [d[1].date().isoformat() for d in dt]
+        dates.sort()
+        #Returns a list of dates found
+        return dates
+    
     def process_message(self, input_message):
         words = self.tokenize_and_lemmatize(input_message)
         bag = self.bag_of_words(words)
@@ -398,75 +408,302 @@ class ChatbotAssistant:
             predictions = self.model(bag_tensor)
         predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
+        print(f"Predicted intent: {predicted_intent}",flush=True)
+        if predicted_intent == "get_from_x_to_y_date":
+            result = self.process_get_from_x_to_y_date(input_message, predicted_intent)
+            return result
 
-        if predicted_intent in self.required_slots and predicted_intent == "get_from_x_to_y_date":
-            success, stations = self.extract_stations(input_message, predicted_intent)
-            if stations:
-                if not success:
-                    if not self.current_slots["departure"] and not self.current_slots["destination"]:
-                        message = "It seems like you mentioned one of "
-                        while len(stations) > 2:
-                            message += stations.pop() + ", "
-                        if len(stations) == 2:
-                            message += stations.pop() + " and "
-                        if len(stations) == 1:
-                            message += stations.pop()
-                        self.previous_responses.append("specify_which_station")
-                        return(f"{message}. Please specify which of these you mean.")
-                    elif not self.current_slots["departure"]:
-                        self.current_slots["departure"] = stations[0]
-                    elif not self.current_slots["destination"]:
-                        self.current_slots["departure"] = stations[0]
-                if not self.current_slots["departure"]:
-                    self.current_slots["departure"] = stations[0]
-                if not self.current_slots["destination"] and len(stations) > 1:
-                    self.current_slots["destination"] = stations[1]
-            else:
-                return random.choice(["I'm not too sure what specific stations you mean! Could you clarify?", "Could you specify which stations you mean?"])
-        
-            date = self.extract_date(input_message)
-            if date:
-                self.current_slots["date"] = date
-            
-            unfilled_slots = []
-            for slot in self.required_slots[predicted_intent]:
-                if not self.current_slots[slot]:
-                    unfilled_slots.append(slot)
-            if len(unfilled_slots) == 0:
-                self.function_mappings[predicted_intent](departure, destination, date)
-            message = "Sure! Just tell me your "
-            while len(unfilled_slots) > 2:
-                message += unfilled_slots.pop() + ", "
-            if len(unfilled_slots) == 2:
-                message += unfilled_slots.pop() + " and "
-            if len(unfilled_slots) == 1:
-                return message + unfilled_slots.pop() + "."
-
-            departure = self.current_slots["departure"]
-            destination = self.current_slots["destination"]
-            date = self.current_slots["date"]
-            result = self.function_mappings[predicted_intent](departure, destination, date)
-
-            self.current_slots = {s: None for s in self.current_slots}
+        #If the user explicitly asks for a single/one way journey, set the type to single first and then call process_get_from_x_to_y_date
+        if predicted_intent == "get_from_x_to_y_date_single":
+            self.current_slots["type"] = "single"
+            self.required_slots = self.required_slots_single
+            result = self.process_get_from_x_to_y_date(input_message, predicted_intent)
             return result
         
-        elif predicted_intent in self.required_slots and predicted_intent == "date":
-            date = self.extract_date(input_message)
-            self.current_slots["date"] = date
+        if predicted_intent == "get_from_x_to_y_date_return":
+            result = self.process_get_from_x_to_y_return(input_message, predicted_intent)
+            return result
+
+        elif predicted_intent == "date":
+            result = self.process_date(input_message)
+            return result
 
         
 
         return random.choice(self.intents_responses[predicted_intent])
+    
+    def process_get_from_x_to_y_date(self, input_message, predicted_intent):
+        print("stations extracted",self.extract_stations(input_message, predicted_intent),flush=True)
+        success, stations = self.extract_stations(input_message, predicted_intent)
+        if stations:
+            if not success:
+                if not self.current_slots["departure"] and not self.current_slots["destination"]:
+                    message = "It seems like you mentioned one of "
+                    while len(stations) > 2:
+                        message += stations.pop() + ", "
+                    if len(stations) == 2:
+                        message += stations.pop() + " and "
+                    if len(stations) == 1:
+                        message += stations.pop()
+                    self.previous_responses.append("specify_which_station")
+                    return(f"{message}. Please specify which of these you mean.")
+                elif not self.current_slots["departure"]:
+                    self.current_slots["departure"] = stations[0]
+                elif not self.current_slots["destination"]:
+                    self.current_slots["departure"] = stations[0]
+            if not self.current_slots["departure"]:
+                self.current_slots["departure"] = stations[0]
+            if not self.current_slots["destination"] and len(stations) > 1:
+                self.current_slots["destination"] = stations[1]
+        else:
+            return random.choice(["I'm not too sure what specific stations you mean! Could you clarify?", "Could you specify which stations you mean?"])
+    
+        date = self.extract_date(input_message)
+        if date:
+            #Sets the first date found to date
+            self.current_slots["date"] = date[0]
+        
+        unfilled_slots = []
+        for slot in self.required_slots:
+            if not self.current_slots[slot]:
+                unfilled_slots.append(slot)
+        if len(unfilled_slots) == 0:
+            #Gets the details from self.current_slots and sends them to searchForCheapestTrain
+            departure = self.current_slots["departure"]
+            destination = self.current_slots["destination"]
+            date = self.current_slots["date"]
+            result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            return result
+        
+        #If the type hasnt already been set, return a message asking for the type
+        if not self.current_slots["type"]:
+            return "Ok! And did you want that to be a return journey or just a single?"
+        try:
+            #Removes return date from unfilled slots if it is not required
+            if self.current_slots["type"] != "return":
+                unfilled_slots.remove("return date")
+        except:
+            pass
+        message = "Sure! Just tell me your "
+        while len(unfilled_slots) > 2:
+            message += unfilled_slots.pop() + ", "
+        if len(unfilled_slots) == 2:
+            message += unfilled_slots.pop() + " and "
+        if len(unfilled_slots) == 1:
+            return message + unfilled_slots.pop() + "."
 
+        date = self.current_slots["date"]
+        result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+
+        self.current_slots = {s: None for s in self.current_slots}
+        return result
+
+    
+    def process_get_from_x_to_y_return(self, input_message, predicted_intent):
+        self.current_slots["type"] = "return"
+        self.required_slots = self.required_slots_return
+        success, stations = self.extract_stations(input_message, predicted_intent)
+        if stations:
+            if not success:
+                if not self.current_slots["departure"] and not self.current_slots["destination"]:
+                    message = "It seems like you mentioned one of "
+                    while len(stations) > 2:
+                        message += stations.pop() + ", "
+                    if len(stations) == 2:
+                        message += stations.pop() + " and "
+                    if len(stations) == 1:
+                        message += stations.pop()
+                    self.previous_responses.append("specify_which_station")
+                    return(f"{message}. Please specify which of these you mean.")
+                elif not self.current_slots["departure"]:
+                    self.current_slots["departure"] = stations[0]
+                elif not self.current_slots["destination"]:
+                    self.current_slots["departure"] = stations[0]
+            if not self.current_slots["departure"]:
+                self.current_slots["departure"] = stations[0]
+            if not self.current_slots["destination"] and len(stations) > 1:
+                self.current_slots["destination"] = stations[1]
+        else:
+            return random.choice(["I'm not too sure what specific stations you mean! Could you clarify?", "Could you specify which stations you mean?"])
+        dates = self.extract_date(input_message)
+        print("dates found", dates, flush=True)
+        #If no dates were provided and no dates have already been set
+        if len(dates) == 0 and not (self.current_slots["date"] or self.current_slots["return date"]):
+            return "Sure! you want a return journey, when would you like your outboud journey to be and when would you like to come back?" 
+        #If no dates were provided, but one has already been set
+        elif len(dates) == 0 and (self.current_slots["date"] or self.current_slots["return date"]):
+            return f"Sure! And what day would you like your other journey to be on?"
+        #if one date was provided and no dates have already been set
+        elif len(dates)== 1 and not (self.current_slots["date"] or self.current_slots["return date"]):
+            self.current_slots["date"] = dates[0]
+            return f"Sure! And what day would you like your other journey to be on?"
+        #if one date was provided and one has already been set
+        elif len(dates) == 1 and (bool(self.current_slots["date"]) ^ bool(self.current_slots["return date"])):
+            if self.current_slots["date"]:
+                self.set_outbound_and_return_dates(self.current_slots["date"], dates[0])
+            elif self.current_slots["return date"]:
+                self.set_outbound_and_return_dates(self.current_slots["return date"], dates[0])
+        #if one date was provided and two have already been set, assume that the user wants to change one of them
+        elif len(dates) == 1 and (self.current_slots["date"] and self.current_slots["return date"]):
+            self.current_slots["date"] = dates[0]
+            self.current_slots["return date"] = None
+            return f"Sure! And what day would you like your other journey to be on?"
+        elif len(dates) == 2:
+            #Set the date to be the lower date and the return date to be the higher date
+            self.current_slots["date"] = dates[0]
+            self.current_slots["return date"] = dates[1]
+        unfilled_slots = []
+        for slot in self.required_slots:
+            if not self.current_slots[slot]:
+                unfilled_slots.append(slot)
+        if len(unfilled_slots) == 0:
+            #Gets the details from self.current_slots and sends them to searchForCheapestTrain
+            result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            return result
+
+        try:
+            #Removes return date from unfilled slots if it is not required
+            if self.current_slots["type"] != "return":
+                unfilled_slots.remove("return date")
+        except:
+            pass
+
+        message = "Sure! Just tell me your "
+        while len(unfilled_slots) > 2:
+            message += unfilled_slots.pop() + ", "
+        if len(unfilled_slots) == 2:
+            message += unfilled_slots.pop() + " and "
+        if len(unfilled_slots) == 1:
+            return message + unfilled_slots.pop() + "."
+
+        departure = self.current_slots["departure"]
+        destination = self.current_slots["destination"]
+        date = self.current_slots["date"]
+        result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+
+        self.current_slots = {s: None for s in self.current_slots}
+        return result
+    
+    def process_date(self, input_message):
+        """Method that extracts date(s) from the message and sets the dates in self.current_slots appropriately"""
+        dates = self.extract_date(input_message)
+        #If one date was provided and no dates have already been set, set self.current_slots["date"] and ask the user for more details
+        if len(dates) == 1 and not (self.current_slots["date"] or self.current_slots["return date"]):
+            self.current_slots["date"] = dates[0]
+            #return f"You want to travel on {dates[0]}! Where would you like to go?"
+        #If one date was provided and one has already been set, call set_outbound_and_return_dates
+        elif len(dates) == 1 and (bool(self.current_slots["date"]) ^ bool(self.current_slots["return date"])):
+            if self.current_slots["date"]:
+                self.set_outbound_and_return_dates(self.current_slots["date"], dates[0])
+            elif self.current_slots["return date"]:
+                self.set_outbound_and_return_dates(self.current_slots["return date"], dates[0])
+        #if one date was provided and two have already been set, assume that the user wants to change one of them
+        elif len(dates) == 1 and (self.current_slots["date"] and self.current_slots["return date"]):
+            self.current_slots["date"] = dates[0]
+            self.current_slots["return date"] = None
+            return f"Sure! You now want to travel on {dates[0]}, please tell me again what day you would like your other journey to be on?"
+        #If two dates were provided, call set_outbound_and_return_dates
+        elif len(dates) == 2:
+            self.set_outbound_and_return_dates(dates[0], dates[1])
+        #If more than two dates were provided, ask the user to only provide two
+        elif len(dates) > 2:
+            return "Woah! you gave me alot of dates there, can you please give me no more than two?" 
+        
+        unfilled_slots = []
+        for slot in self.required_slots:
+            if not self.current_slots[slot]:
+                unfilled_slots.append(slot)
+        if len(unfilled_slots) == 0:
+            #Gets the details from self.current_slots and sends them to searchForCheapestTrain
+            departure = self.current_slots["departure"]
+            destination = self.current_slots["destination"]
+            date = self.current_slots["date"]
+            result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            return result
+    
+        try:
+            #Removes return date from unfilled slots if it is not required
+            if self.current_slots["type"] != "return":
+                unfilled_slots.remove("return date")
+        except:
+            pass
+
+        message = "Sure! Just tell me your "
+        while len(unfilled_slots) > 2:
+            message += unfilled_slots.pop() + ", "
+        if len(unfilled_slots) == 2:
+            message += unfilled_slots.pop() + " and "
+        if len(unfilled_slots) == 1:
+            return message + unfilled_slots.pop() + "."
+
+        result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+
+        self.current_slots = {s: None for s in self.current_slots}
+        return result
+
+    def set_outbound_and_return_dates(self, date1, date2):
+        """Method that takes two dates and sets self.current_slots["date"] to the earlier one and self.current_slots["return date"] to the later one"""
+        d1 = date.fromisoformat(date1)
+        d2 = date.fromisoformat(date2)
+        if d1 < d2:
+            self.current_slots["date"] = d1
+            self.current_slots["return date"] = d2
+        else:
+            self.current_slots["date"] = d2
+            self.current_slots["return date"] = d1
+
+    def slotsFilled(self,intent):
+        """Method that checks if the required slots are filled, returns True if they are, False if not"""
+        for slot in self.required_slots[intent]:
+            if not self.current_slots[slot]:
+                return False
+        return True
             
-def searchForCheapestTrain(departureLoc, destinationLoc, time, railcard=None):
+def searchForCheapestTrain(Details):
     """
     Function: Searches for the cheapest train from departureLoc to destinationLoc at a given time.
     Parameters: departureLoc (str), destinationLoc (str), time (str), railcard (str, optional)
     Returns: str - The cheapest train information.
     """
+    departureLoc = Details["departure"]
+    destinationLoc = Details["destination"]
+    
+    # Convert dates to DD/MM/YYYY format if they exist
+    date = Details["date"]
+    returnDate = Details["return date"]
+    if date:
+        if isinstance(date, str):
+            try:
+                date_obj = datetime.strptime(date, "%Y-%m-%d")
+                date = date_obj.strftime("%d/%m/%Y")
+            except ValueError:
+                pass  # If already in correct format or invalid, leave as is
+    if returnDate:
+        if isinstance(returnDate, str):
+            try:
+                return_date_obj = datetime.strptime(returnDate, "%Y-%m-%d")
+                returnDate = return_date_obj.strftime("%d/%m/%Y")
+            except ValueError:
+                pass
 
-    return f"Searching from {departureLoc} to {destinationLoc} on {time}..."
+    type = Details["type"]
+    railcards = Details["railcards"]
+    adultPassengers = Details["adult passengers"]
+    childPassengers = Details["child passengers"]
+    Earliest_Outbound = (12,00)
+    Latest_Outbound = (16,20)
+    Earliest_Inbound = (10,00)
+    Latest_Inbound = (12,20)
+
+    print("You want to travel from", departureLoc, "to", destinationLoc, "on", date, "with a", type, "ticket", flush=True)
+    if returnDate:
+        print("and return on", returnDate,flush=True)
+
+    #WebScraper = TicketFinder(departureLoc, destinationLoc, date, Return_Date=returnDate, Type=type, Earliest_Outbound=Earliest_Outbound, Latest_Outbound=Latest_Outbound, Earliest_Inbound=Earliest_Inbound, Latest_Inbound=Latest_Inbound, Railcards=railcards, Adults=adultPassengers, Children=childPassengers)
+    #Outbound_Journeys, Inbound_Journeys = WebScraper.Search()
+    #return "Outbound Journeys: " + str(Outbound_Journeys) + "\nInbound Journeys: " + str(Inbound_Journeys)
+    #print(departureLoc, destinationLoc, date, railcard,flush=True)
+    return f"Searching for the cheapest train from {departureLoc} to {destinationLoc} on {date} with a {type} ticket. Return date: {returnDate}."
 
 def getDelay(currentStation, destination, originalArrivalTime, currentDelay):
     return f"Calculating delay"

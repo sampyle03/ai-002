@@ -53,7 +53,7 @@ class ChatbotAssistant:
         self.intents = []
         self.intents_responses = {}
         self.previous_intents = []
-        self.previous_responses = []
+        self.previous_response = None
 
         self.function_mappings = function_mappings
 
@@ -103,10 +103,10 @@ class ChatbotAssistant:
                 else:
                     self.stations.append(re.sub(regex_pattern, "", row["name"]))
         
-        self.letter_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4))
+        self.station_letter_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4))
         stations_lower = [station.lower() for station in self.stations]
-        self.letter_vectorizer.fit(stations_lower)
-        self.stations_matrix = self.letter_vectorizer.transform(stations_lower)
+        self.station_letter_vectorizer.fit(stations_lower)
+        self.stations_matrix = self.station_letter_vectorizer.transform(stations_lower)
     
     def load_railcards(self, path):
         self.railcards = []
@@ -115,9 +115,9 @@ class ChatbotAssistant:
                 self.railcards.append(line.split(" : ")[0])
 
         railcards_lower = [railcard.lower() for railcard in self.railcards]
-        self.letter_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4))
-        self.letter_vectorizer.fit(railcards_lower)
-        self.railcards_matrix = self.letter_vectorizer.transform(railcards_lower)
+        self.railcard_letter_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4))
+        self.railcard_letter_vectorizer.fit(railcards_lower)
+        self.railcards_matrix = self.railcard_letter_vectorizer.transform(railcards_lower)
 
 
     def prepare_data(self):
@@ -196,7 +196,7 @@ class ChatbotAssistant:
             for start_idx, word in message_tokens:
                 if word in common_words:
                     continue
-                vec = self.letter_vectorizer.transform([word])
+                vec = self.station_letter_vectorizer.transform([word])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
                     if sim > min_token_cosine_score:
@@ -210,7 +210,7 @@ class ChatbotAssistant:
             for start_idx, gram in message_2grams:
                 if gram[0] in common_words or gram[1] in common_words:
                     continue # skip iteration if one of the words found in the gram is a common word
-                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                vec = self.station_letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
                     if sim > min_2gram_cosine_score:
@@ -224,7 +224,7 @@ class ChatbotAssistant:
             for start_idx, gram in message_3grams:
                 if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words:
                     continue # skip iteration if one of the words found in the gram is a common word
-                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                vec = self.station_letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
                     if sim > min_3gram_cosine_score:
@@ -238,7 +238,7 @@ class ChatbotAssistant:
             for start_idx, gram in message_4grams:
                 if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words or gram[3] in common_words:
                     continue # skip iteration if one of the words found in the gram is a common word
-                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                vec = self.station_letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.stations_matrix).flatten()
                 for station_idx, sim in enumerate(scores):
                     if sim > min_4gram_cosine_score:
@@ -332,7 +332,7 @@ class ChatbotAssistant:
             for start_idx, word in message_tokens:
                 if word in common_words:
                     continue
-                vec = self.letter_vectorizer.transform([word])
+                vec = self.railcard_letter_vectorizer.transform([word])
                 scores = cosine_similarity(vec, self.railcards_matrix).flatten()
                 for railcard_idx, sim in enumerate(scores):
                     if sim > min_token_cosine_score:
@@ -341,7 +341,7 @@ class ChatbotAssistant:
             for start_idx, gram in message_2grams:
                 if gram[0] in common_words or gram[1] in common_words:
                     continue
-                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                vec = self.railcard_letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.railcards_matrix).flatten()
                 for railcard_idx, sim in enumerate(scores):
                     if sim > min_2gram_cosine_score:
@@ -350,7 +350,7 @@ class ChatbotAssistant:
             for start_idx, gram in message_3grams:
                 if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words:
                     continue
-                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                vec = self.railcard_letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.railcards_matrix).flatten()
                 for railcard_idx, sim in enumerate(scores):
                     if sim > min_3gram_cosine_score:
@@ -359,7 +359,7 @@ class ChatbotAssistant:
             for start_idx, gram in message_4grams:
                 if gram[0] in common_words or gram[1] in common_words or gram[2] in common_words or gram[3] in common_words:
                     continue
-                vec = self.letter_vectorizer.transform([" ".join(gram)])
+                vec = self.railcard_letter_vectorizer.transform([" ".join(gram)])
                 scores = cosine_similarity(vec, self.railcards_matrix).flatten()
                 for railcard_idx, sim in enumerate(scores):
                     if sim > min_4gram_cosine_score:
@@ -381,6 +381,7 @@ class ChatbotAssistant:
         for name, sim in possible_railcards.items():
             if sim > highest[1]:
                 highest = (name, sim)
+        print(highest[0], flush=True)
         return highest[0]
 
 
@@ -397,6 +398,44 @@ class ChatbotAssistant:
         #Returns a list of dates found
         return dates
     
+    def extract_passengers(self, text):
+        # "2 adults and 3 children", "one adult"
+        numbers = set([1,2,3,4,5])
+        wordsForAdultTicket = set(["adult", "adults", "adult's", "adults'", "adult's", "adults'", "adult's", "adults'", "people", "person", "people's", "person's", "people's", "person's"])
+        wordsForChildTicket = set(["child", "children", "child's", "children's", "child's", "children's", "child's", "children's", "kids", "kid", "kids'", "kid's", "kids'", "kid's", "kids'", "boy", "girl", "boys", "girls"])
+        
+        text.replace("one", "1").replace("two", "2").replace("three", "3").replace("four", "4").replace("five", "5")
+        text = nltk.word_tokenize(text)
+        numberOfAdultsOrChildren = None
+        for word in text:
+            if word in numbers:
+                numberOfAdultsOrChildren = word
+            elif word.lower() in wordsForAdultTicket:
+                self.current_slots["adult passengers"] = numberOfAdultsOrChildren
+            elif word.lower() in wordsForChildTicket:
+                self.current_slots["child passengers"] = numberOfAdultsOrChildren
+
+    def get_next_slot(self):
+        # current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
+        count = 0
+        for slot, value in self.current_slots.items():
+            if count >= len(self.required_slots):
+                self.previous_response = "required_details_entered_any_other_details"
+                return "Ok! Do you want to enter any other details?"
+            elif value is None:
+                if slot == "type":
+                    return "Ok! Will you require a single or return ticket?"
+                elif slot == "date":
+                    self.previous_response = "when_departure_journey"
+                    return "Ok! And what day will be your departure date?"
+                elif slot == "return date":
+                    self.previous_response = "when_return_journey"
+                    return "Ok! And what day will be your return date?"
+                else:
+                    return f"Ok! Just tell me your {slot}"
+            count += 1
+                
+    
     def process_message(self, input_message):
         words = self.tokenize_and_lemmatize(input_message)
         bag = self.bag_of_words(words)
@@ -409,24 +448,58 @@ class ChatbotAssistant:
         predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
         print(f"Predicted intent: {predicted_intent}",flush=True)
-        if predicted_intent == "get_from_x_to_y_date":
+
+        
+        if predicted_intent == "new_search":
+            self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
+            self.previous_response = None
+            return random.choice(self.intents_responses[predicted_intent])
+        elif predicted_intent == "adult_passengers" or predicted_intent == "child_passengers":
+            self.extract_passengers(input_message)
+            return self.get_next_slot()
+        elif predicted_intent == "single":
+            self.current_slots["type"] = "single"
+            self.required_slots = self.required_slots_single
+            return self.get_next_slot()
+        # if predicted intent is "return", "return please" etc 
+        elif predicted_intent == "return":
+            self.current_slots["type"] = "return"
+            self.required_slots = self.required_slots_return
+            return self.get_next_slot()
+        # if user has said "16-25 Railcard", "I've not got a railcard", "North Lincolnshire Concessionary 34%" etc.
+        elif predicted_intent == "railcard":
+            self.current_slots["railcard"] = self.extract_railcard(input_message)
+            return self.get_next_slot()
+        # if predicted intent is "no", "nah thanks", "nope" etc AND they've been asked whether they'd like to enter any other details because they have enetered all required details
+        elif predicted_intent == "no" and self.previous_response == "required_details_entered_any_other_details":
+            return searchForCheapestTrain(self.current_slots)
+        # if predicted intent is "no", "nah thanks", "nope" etc AND they've NOT been asked whether they'd like to enter any other details because they have enetered all required details
+        elif predicted_intent == "no" and self.previous_response != "required_details_entered_any_other_details":
+            return self.get_next_slot()
+        # if predicted intent is "I wanna travel from Norwich to Shenfield on Friday", "I would like a ticket from Blackpool North to Blackpool South on 23/06/2025"
+        elif predicted_intent == "get_from_x_to_y_date":
             result = self.process_get_from_x_to_y_date(input_message, predicted_intent)
             return result
-
-        #If the user explicitly asks for a single/one way journey, set the type to single first and then call process_get_from_x_to_y_date
-        if predicted_intent == "get_from_x_to_y_date_single":
+        # if predicted intent is "I wanna travel one-way from Norwich to Shenfield on Friday", "I would like a single ticket from Blackpool North to Blackpool South on 23/06/2025"
+        elif predicted_intent == "get_from_x_to_y_date_single":
             self.current_slots["type"] = "single"
             self.required_slots = self.required_slots_single
             result = self.process_get_from_x_to_y_date(input_message, predicted_intent)
             return result
-        
-        if predicted_intent == "get_from_x_to_y_date_return":
+        # if predicted intent is "I wanna travel to Shenfield and back from Norwich on Friday", "I would like a return ticket from Blackpool North to Blackpool South on 23/06/2025"
+        elif predicted_intent == "get_from_x_to_y_date_return":
+            self.current_slots["type"] = "return"
+            self.required_slots = self.required_slots_return
             result = self.process_get_from_x_to_y_return(input_message, predicted_intent)
-            return result
-
+            print("YIPPEE", result, flush=True)
+        # if predicted intent is "Friday", "23/06/2025", "tomorrow" etc.
         elif predicted_intent == "date":
             result = self.process_date(input_message)
-            return result
+            if self.previous_response == "when_departure_journey":
+                self.current_slots["return date"] = result
+            else:
+                self.current_slots["date"] = result
+            self.get_next_slot()
 
         
 
@@ -435,7 +508,7 @@ class ChatbotAssistant:
     def process_get_from_x_to_y_date(self, input_message, predicted_intent):
         print("stations extracted",self.extract_stations(input_message, predicted_intent),flush=True)
         success, stations = self.extract_stations(input_message, predicted_intent)
-        if stations:
+        if stations[0] and stations[1]:
             if not success:
                 if not self.current_slots["departure"] and not self.current_slots["destination"]:
                     message = "It seems like you mentioned one of "
@@ -445,7 +518,7 @@ class ChatbotAssistant:
                         message += stations.pop() + " and "
                     if len(stations) == 1:
                         message += stations.pop()
-                    self.previous_responses.append("specify_which_station")
+                    self.previous_response = "specify_which_station"
                     return(f"{message}. Please specify which of these you mean.")
                 elif not self.current_slots["departure"]:
                     self.current_slots["departure"] = stations[0]
@@ -472,8 +545,9 @@ class ChatbotAssistant:
             departure = self.current_slots["departure"]
             destination = self.current_slots["destination"]
             date = self.current_slots["date"]
-            result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
-            return result
+            # result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            # return result
+            return self.get_next_slot()
         
         #If the type hasnt already been set, return a message asking for the type
         if not self.current_slots["type"]:
@@ -484,26 +558,14 @@ class ChatbotAssistant:
                 unfilled_slots.remove("return date")
         except:
             pass
-        message = "Sure! Just tell me your "
-        while len(unfilled_slots) > 2:
-            message += unfilled_slots.pop() + ", "
-        if len(unfilled_slots) == 2:
-            message += unfilled_slots.pop() + " and "
-        if len(unfilled_slots) == 1:
-            return message + unfilled_slots.pop() + "."
-
-        date = self.current_slots["date"]
-        result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
-
-        self.current_slots = {s: None for s in self.current_slots}
-        return result
+        return self.get_next_slot()
 
     
     def process_get_from_x_to_y_return(self, input_message, predicted_intent):
         self.current_slots["type"] = "return"
         self.required_slots = self.required_slots_return
         success, stations = self.extract_stations(input_message, predicted_intent)
-        if stations:
+        if stations[0] and stations[1]:
             if not success:
                 if not self.current_slots["departure"] and not self.current_slots["destination"]:
                     message = "It seems like you mentioned one of "
@@ -513,7 +575,7 @@ class ChatbotAssistant:
                         message += stations.pop() + " and "
                     if len(stations) == 1:
                         message += stations.pop()
-                    self.previous_responses.append("specify_which_station")
+                    self.previous_response = "specify_which_station"
                     return(f"{message}. Please specify which of these you mean.")
                 elif not self.current_slots["departure"]:
                     self.current_slots["departure"] = stations[0]
@@ -529,13 +591,16 @@ class ChatbotAssistant:
         print("dates found", dates, flush=True)
         #If no dates were provided and no dates have already been set
         if len(dates) == 0 and not (self.current_slots["date"] or self.current_slots["return date"]):
-            return "Sure! you want a return journey, when would you like your outboud journey to be and when would you like to come back?" 
+            self.previous_response = "when_departure_journey"
+            return "Sure! You want a return journey. What day will be your departure journey?" 
         #If no dates were provided, but one has already been set
         elif len(dates) == 0 and (self.current_slots["date"] or self.current_slots["return date"]):
+            self.previous_response = "when_return_journey"
             return f"Sure! And what day would you like your other journey to be on?"
         #if one date was provided and no dates have already been set
         elif len(dates)== 1 and not (self.current_slots["date"] or self.current_slots["return date"]):
             self.current_slots["date"] = dates[0]
+            self.previous_response = "when_return_journey"
             return f"Sure! And what day would you like your other journey to be on?"
         #if one date was provided and one has already been set
         elif len(dates) == 1 and (bool(self.current_slots["date"]) ^ bool(self.current_slots["return date"])):
@@ -568,21 +633,7 @@ class ChatbotAssistant:
         except:
             pass
 
-        message = "Sure! Just tell me your "
-        while len(unfilled_slots) > 2:
-            message += unfilled_slots.pop() + ", "
-        if len(unfilled_slots) == 2:
-            message += unfilled_slots.pop() + " and "
-        if len(unfilled_slots) == 1:
-            return message + unfilled_slots.pop() + "."
-
-        departure = self.current_slots["departure"]
-        destination = self.current_slots["destination"]
-        date = self.current_slots["date"]
-        result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
-
-        self.current_slots = {s: None for s in self.current_slots}
-        return result
+        self.get_next_slot()
     
     def process_date(self, input_message):
         """Method that extracts date(s) from the message and sets the dates in self.current_slots appropriately"""
@@ -618,7 +669,7 @@ class ChatbotAssistant:
             departure = self.current_slots["departure"]
             destination = self.current_slots["destination"]
             date = self.current_slots["date"]
-            result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            result = self.get_next_slot()
             return result
     
         try:
@@ -628,19 +679,7 @@ class ChatbotAssistant:
         except:
             pass
 
-        # Time to edit this SAMAMSDSFJNDRGJBIFEHBF!
-        message = "Sure! Just tell me your "
-        while len(unfilled_slots) > 2:
-            message += unfilled_slots.pop() + ", "
-        if len(unfilled_slots) == 2:
-            message += unfilled_slots.pop() + " and "
-        if len(unfilled_slots) == 1:
-            return message + unfilled_slots.pop() + "."
-
-        result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
-
-        self.current_slots = {s: None for s in self.current_slots}
-        return result
+        self.get_next_slot()
 
     def set_outbound_and_return_dates(self, date1, date2):
         """Method that takes two dates and sets self.current_slots["date"] to the earlier one and self.current_slots["return date"] to the later one"""
@@ -704,7 +743,7 @@ def searchForCheapestTrain(details):
     #Outbound_Journeys, Inbound_Journeys = WebScraper.Search()
     #return "Outbound Journeys: " + str(Outbound_Journeys) + "\nInbound Journeys: " + str(Inbound_Journeys)
     #print(departureLoc, destinationLoc, date, railcard,flush=True)
-    return f"Searching for the cheapest train from {departureLoc} to {destinationLoc} on {date} with a {type} ticket. Return date: {returnDate}."
+    return f"Searching for the cheapest train from {departureLoc} to {destinationLoc} on {date} with a {type} ticket. Return date: {returnDate}. Using railcard: {railcards}. Earliest outbound: {earliestOutbound}. Latest outbound: {latestOutbound}. Earliest inbound: {earliestInbound}. Latest inbound: {latestInbound}. No. of Adult passengers: {adultPassengers}. No. of Child passengers: {childPassengers}."
 
 def getDelay(currentStation, destination, originalArrivalTime, currentDelay):
     return f"Calculating delay"
@@ -717,4 +756,4 @@ if __name__ == "__main__":
     assistant.load_railcards(os.path.join(os.path.dirname(__file__), "../data/railcards.txt"))
     assistant.prepare_data()
     assistant.train_model(batch_size=8, lr=0.001, epochs=150)
-    assistant.save_model("model.pth", "dimensions.json")
+    assistant.save_model(os.path.join(os.path.dirname(__file__), "../model.pth"), os.path.join(os.path.dirname(__file__), "../dimensions.json"))

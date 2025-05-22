@@ -491,7 +491,7 @@ class ChatbotAssistant:
             self.current_slots["type"] = "return"
             self.required_slots = self.required_slots_return
             result = self.process_get_from_x_to_y_return(input_message, predicted_intent)
-            print("YIPPEE", result, flush=True)
+            return result
         # if predicted intent is "Friday", "23/06/2025", "tomorrow" etc.
         elif predicted_intent == "date":
             result = self.process_date(input_message)

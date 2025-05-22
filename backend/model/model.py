@@ -628,6 +628,7 @@ class ChatbotAssistant:
         except:
             pass
 
+        # Time to edit this SAMAMSDSFJNDRGJBIFEHBF!
         message = "Sure! Just tell me your "
         while len(unfilled_slots) > 2:
             message += unfilled_slots.pop() + ", "
@@ -659,18 +660,18 @@ class ChatbotAssistant:
                 return False
         return True
             
-def searchForCheapestTrain(Details):
+def searchForCheapestTrain(details):
     """
     Function: Searches for the cheapest train from departureLoc to destinationLoc at a given time.
     Parameters: departureLoc (str), destinationLoc (str), time (str), railcard (str, optional)
     Returns: str - The cheapest train information.
     """
-    departureLoc = Details["departure"]
-    destinationLoc = Details["destination"]
+    departureLoc = details["departure"]
+    destinationLoc = details["destination"]
     
     # Convert dates to DD/MM/YYYY format if they exist
-    date = Details["date"]
-    returnDate = Details["return date"]
+    date = details["date"]
+    returnDate = details["return date"]
     if date:
         if isinstance(date, str):
             try:
@@ -686,14 +687,14 @@ def searchForCheapestTrain(Details):
             except ValueError:
                 pass
 
-    type = Details["type"]
-    railcards = Details["railcards"]
-    adultPassengers = Details["adult passengers"]
-    childPassengers = Details["child passengers"]
-    Earliest_Outbound = (12,00)
-    Latest_Outbound = (16,20)
-    Earliest_Inbound = (10,00)
-    Latest_Inbound = (12,20)
+    type = details["type"]
+    railcards = details["railcards"]
+    adultPassengers = details["adult passengers"]
+    childPassengers = details["child passengers"]
+    earliestOutbound = (12,00)
+    latestOutbound = (16,20)
+    earliestInbound = (10,00)
+    latestInbound = (12,20)
 
     print("You want to travel from", departureLoc, "to", destinationLoc, "on", date, "with a", type, "ticket", flush=True)
     if returnDate:

@@ -43,7 +43,7 @@
         },
         {
             "tag": "new_search",
-            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "I wanna book a train", "Help me book a train please", "I want to book another ticket", "Help me get a new ticket", "Help me start a new search"],
+            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "Help me book another train please", "I want to book another ticket", "Help me get a new ticket", "Help me start a new search"],
             "responses": ["Sure! Let's start fresh. What do you need help with?", "Alright! Starting a new search. What can I assist you with?"]
         },
         {
@@ -56,7 +56,8 @@
             "patterns": [
                 "I want to go from X to Y on Z", "I want to travel from X to Y on Z", "Can I go from X to Y on Z?", "Book me a ticket from X to Y on Z", "I need to get from X to Y on Z", "Travel from X to Y on Z", "I want to leave X for Y on Z", "I want to visit Y from X on Z", "From X to Y on Z", "Get me from X to Y on Z",
                 "I want to go from X to Y tomorrow", "I want to travel from X to Y next week", "I want to go from X to Y today", "Is there a train from X to Y on Z?", "Are there tickets from X to Y on Z?", "Can I get from X to Y on Z?", "I want to book a train from X to Y on Z", "I need a train from X to Y on Z", "Looking for trains from X to Y on Z", "Find me a train from X to Y on Z",
-                "Show me trains from X to Y on Z", "I want to depart from X and arrive at Y on Z", "I will be leaving from X to go to Y on Z", "Going from X to Y on Z", "Train from X to Y on Z", "Tickets from X to Y on Z", "I want to book from X to Y on Z", "I want to travel to Y from X on Z", "I want to go to Y from X on Z"
+                "Show me trains from X to Y on Z", "I want to depart from X and arrive at Y on Z", "I will be leaving from X to go to Y on Z", "Going from X to Y on Z", "Train from X to Y on Z", "Tickets from X to Y on Z", "I want to book from X to Y on Z", "I want to travel to Y from X on Z", "I want to go to Y from X on Z", "I wanna travel from X to Y tomorrow", "I wanna travel from X to Y next week", 
+                "I wanna travel from X to Y today", "I want to go from X to Y on Z", "I wanna get from X to Y on Z"
             ],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
         },
@@ -114,6 +115,11 @@
             "tag": "child_passengers",
             "patterns": ["One child passenger ticket", "1 child please", "Two child passenger tickets", "2 children please", "Three child passenger tickets", "3 children please", "Four child passenger tickets", "4 children please", "Five child passenger tickets", "5 children please"],
             "responses": ["Child passenger tickets it is!", "Child tickets coming right up!", "Got it! Child tickets for you."]
+        },
+        {
+            "tag": "get_delay",
+            "patterns": ["My train is delayed. The time is X, and I am at station Y. When will my train arrive?", "Help - this train I am on has a delay and I am at station Y. The time is X. When will my train arrive?"],
+            "responses": ["I can help you with that! Please provide me with the train number and the station you're at.", "Sure! I can assist you. Please let me know the train number and your current station."]
         }
     ]
 }

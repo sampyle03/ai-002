@@ -32,4 +32,5 @@ Veterans Railcard : VET
 West Yorkshire Disabled Concessionary Discount : WYD
 West Yorkshire MetroRover Permit : WMR
 West Yorkshire Senior Concessionary Discount : WYS
-No, nah I've not got a Railcard : NRC
+No, nah I've don't not got a Railcard : NRC
+Yes yeah ye, I do indeed have a railcard : YRC

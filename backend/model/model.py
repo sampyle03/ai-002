@@ -600,6 +600,12 @@ class ChatbotAssistant:
                     possible_original_arrival_time = self.extract_date(input_message)
                     if possible_original_arrival_time:
                         self.current_slots["original arrival time"] = possible_original_arrival_time
+            elif self.current_task == "get_ticket":
+                result = self.process_date(input_message)
+                print("POOP", result, flush=True)
+                if result:
+                    return result
+                return self.get_next_slot()
         elif predicted_intent == "current_delay":
             if self.current_task == "get_delay":
                 possible_current_delay = self.extract_current_delay(input_message)
@@ -665,11 +671,7 @@ class ChatbotAssistant:
             result = self.process_get_from_x_to_y_return(input_message, predicted_intent)
             return result
         # if predicted intent is "Friday", "23/06/2025", "tomorrow" etc.
-        elif predicted_intent == "date":
-            result = self.process_date(input_message)
-            if result:
-                return result
-            return self.get_next_slot()
+        
         elif predicted_intent == "noanswer":
             if self.current_task == "get_delay":
                 success, possible_station = self.extract_one_station(input_message)

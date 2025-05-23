@@ -100,6 +100,13 @@
             "responses": ["Alright, let me know if you need anything else.", "No problem! If you have any other questions, feel free to ask.", "Got it! If you change your mind, I'm here to help."]
         },
         {
+            "tag": "yes",
+            "patterns": [
+                "yes", "yeah", "ye", "yup", "indeed", "correct"
+            ],
+            "responses": ["OK!"]
+        },
+        {
             "tag": "railcard",
             "patterns": [
                 "16-17 Saver", "16-25 Railcard", "18 Saver - Transport for Wales", "26-30 Railcard", "Annual Gold Card Record Card", "Cambrian Railcard", "Club 50 Web - ScotRail", "Dales Railcard", "Devon & Cornwall Gold Card", "Devon & Cornwall Railcard", "Disabled Persons Railcard", "Esk Valley Railcard", "Family & Friends Railcard", "GroupSave", "Heart of Wales Railcard", "Highland Railcard", "HM Forces Railcard", "Jobcentre Plus Travel Discount Card", "MyCumbria Card", "Network Railcard", "North Lincolnshire Concessionary 34%", "North Lincolnshire Concessionary 50%", "Pembrokeshire Railcard", "Rhondda Railcard", "Senior Railcard", "South Yorkshire 16-18 Zoom Travel Pass", "Student Railcard - Transport for Wales", "Two Together Railcard", "Valleys Senior Railcard", "Valleys Student Railcard", "Veterans Railcard", "West Yorkshire Disabled Concessionary Discount", "West Yorkshire MetroRover Permit", "West Yorkshire Senior Concessionary Discount", "No Railcard", "I don't have a railcard", "Rail card", "Discount Card"
@@ -117,9 +124,21 @@
             "responses": ["Child passenger tickets it is!", "Child tickets coming right up!", "Got it! Child tickets for you."]
         },
         {
-            "tag": "get_delay",
-            "patterns": ["My train is delayed. The time is X, and I am at station Y. When will my train arrive?", "Help - this train I am on has a delay and I am at station Y. The time is X. When will my train arrive?"],
+            "tag": "get_delay_from_x_to_y",
+            "patterns": ["My train is delayed. I am going to station X, and I am at station Y. It was meant to arrive at Z, but it is delayed by K minutes. When will my train arrive?", "Help - this train I am on has a delay and I am at station Y. The time is X. When will my train arrive?"],
             "responses": ["I can help you with that! Please provide me with the train number and the station you're at.", "Sure! I can assist you. Please let me know the train number and your current station."]
+        },
+        {
+            "tag": "time",
+            "patterns": ["01:12", "03:45", "06:17", "08:28", "09:34", "o'clock", "midnight", "noon", "12:00", "23:59", "15:30", "18:45", "20:15"],
+            "responses": ["Time set!", "Got it! Time noted.", "Time is set!"]
+        },
+        {
+            "tag": "current_delay",
+            "patterns": ["1 second", "1 minute", "1 hour", "one second", "one minute", "one hour", "2 minutes", "3 hours", "4 seconds", "5 minutes", "6 hours", "7 seconds", "8 minutes", "9 hours", "10 seconds", "11 minutes", "12 hours", "13 seconds", "14 minutes", "15 hours", "16 seconds", 
+            "17 minutes", "18 hours", "19 seconds", "20 minutes", "21 hours", "three seconds", "three minutes", "three hours", "four seconds", "four minutes", "four hours", "five seconds", "five minutes", "five hours", "six seconds", "six minutes", "six hours", "seven seconds", "seven minutes", 
+            "seven hours", "eight seconds", "eight minutes", "eight hours", "nine seconds", "nine minutes", "nine hours"],
+            "responses": ["Delay set!", "Got it! Delay noted.", "Delay is set!"]
         }
     ]
 }

@@ -48,7 +48,7 @@
         },
         {
             "tag": "date",
-            "patterns": ["On Monday", "On Tuesday", "On Wednesday", "On Thursday", "On Friday", "On Saturday", "On Sunday", "Next Monday", "Next Tuesday", "Next Wednesday", "Next Thursday", "Next Friday", "Next Saturday", "Next Sunday", "Tomorrow", "Today", "In X days", "In X weeks", "On 01/01/2025", "On 01-01-2025", "On 2025-01-01", "On 2025/01/01", "On X 1st, 2025", "On X 2nd, 2025", "On X 3, 2025"],
+            "patterns": ["On Monday", "On Tuesday", "On Wednesday", "On Thursday", "On Friday", "On Saturday", "On Sunday", "Next Monday", "Next Tuesday", "Next Wednesday", "Next Thursday", "Next Friday", "Next Saturday", "Next Sunday", "Tomorrow", "Today", "In X days", "In X weeks", "On 01/01/2025", "On 01-01-2025", "On 2025-01-01", "On 2025/01/01", "On Januaray 1st, 2025", "On February 2nd, 2025", "On March 3rd, 2025", "On April 4th", "On May 5th", "On June 6th", "On July 7th", "On August 8th", "On September 9th", "On October 10th", "On November 11th", "On December 12th", "13th", "14th", "15th", "16th", "17th", "18th", "19th", "20th", "21st", "22nd", "23rd", "24th", "25th", "26th", "27th", "28th", "29th", "30th"],
             "responses": ["Ok! Let's see..."]
         },
         {

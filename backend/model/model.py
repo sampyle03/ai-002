@@ -303,6 +303,7 @@ class ChatbotAssistant:
                 try:
                     results.remove(two_stations[1])
                 except: # called when no stations are found usually
+                    print("ahudsfdsiufdsiusf"  , flush=True)
                     return False, [None, None]
                 removed.append(two_stations[1])
                 two_stations[0] = two_stations[1]
@@ -406,11 +407,36 @@ class ChatbotAssistant:
         return highest[0]
 
 
-
+    def preprocess_date_text(self, text):
+        text = text.lower()
+        text = text.replace("on", "this")
+        text = text.replace("next week", "in 7 days")
+        return text
 
     def extract_date(self, text):
-        text = text.replace("on", "this")
-        dt = search_dates(text, settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now(), "SKIP_TOKENS": ["to", "from", "rail", "station", "travel"]})
+        text = self.preprocess_date_text(text)
+        dt = search_dates(text, settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now(), "SKIP_TOKENS": ["to", "from", "rail", "station", "travel"], "DATE_ORDER": "DMY"})
+        print(f"dt = {dt}", flush=True)
+        if not dt:
+            day = re.search(r"\b(\d{1,2})(st|nd|rd|th)\b", text.lower()) # https://stackoverflow.com/questions/2118825/modify-regex-to-match-dates-with-ordinals-st-nd-rd-th
+            print(f"day = {day}", flush=True)
+            if day:
+                day = int(day.group(1))
+                now = datetime.now()
+                try:
+                    candidate = datetime(now.year, now.month, day)
+                    print(f"candidate = {candidate}", flush=True)
+                    if candidate.date() <= now.date():
+                        # If candidate day has passed this month, use next month
+                        if now.month == 12:
+                            candidate = datetime(now.year + 1, 1, day)
+                        else:
+                            candidate = datetime(now.year, now.month + 1, day)
+                    return [candidate.date().isoformat()]
+                except:
+                    candidate = datetime(now.year, now.month, day)
+                    print(f"candidate = {candidate}", flush=True)
+                    return []
         if not dt:
             return []
         #Sorts the dates by time
@@ -529,7 +555,7 @@ class ChatbotAssistant:
             if self.current_task == "get_ticket":
                 if count >= len(self.required_slots):
                     self.previous_response = "required_details_entered_any_other_details"
-                    return "Ok! Do you want to enter any other details?"
+                    return random.choices(["Ok! Do you want to enter any other details?", "So then - are there any other details you'd like to tell me about your journey?", "Would you like to enter any other details about your journey?", "Do you want to enter any other details about your journey?" + "Cool! Anything else I should know?"])
                 elif value is None:
                     if slot == "type":
                         return "Ok! Will you require a single or return ticket?"
@@ -594,6 +620,7 @@ class ChatbotAssistant:
             if message is not None:
                 return message
             return self.get_next_slot()
+        # if predicted intent is "Friday", "23/06/2025", "tomorrow" etc.
         elif predicted_intent == "date":
             if self.current_task == "get_delay":
                 if self.previous_response == "when_arrival_time":
@@ -602,7 +629,6 @@ class ChatbotAssistant:
                         self.current_slots["original arrival time"] = possible_original_arrival_time
             elif self.current_task == "get_ticket":
                 result = self.process_date(input_message)
-                print("POOP", result, flush=True)
                 if result:
                     return result
                 return self.get_next_slot()
@@ -640,10 +666,17 @@ class ChatbotAssistant:
             # If the user has entered a specific railcard
             self.current_slots["railcard"] = potential_railcard
             return self.get_next_slot()
-        elif predicted_intent == "yes" and self.previous_response == "is_station_current":
-            self.current_slots["current station"] = self.temp
-            self.temp = None
-            return f"Ok! Current station is {self.current_slots['destination']}!\n"+self.get_next_slot()
+
+        elif predicted_intent == "yes":
+            if self.previous_response == "is_station_current":
+                self.current_slots["current station"] = self.temp
+                self.temp = None
+                return f"Ok! Current station is {self.current_slots["current station"]}!\n"+self.get_next_slot()
+            elif self.previous_response == "is_station_departure":
+                self.current_slots["departure"] = self.temp
+                self.temp = None
+                return f"Ok! Departure station is {self.current_slots["departure"]}!\n"+self.get_next_slot()
+
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response == "required_details_entered_any_other_details":
             return self.searchForCheapestTrain(self.current_slots)
@@ -666,12 +699,22 @@ class ChatbotAssistant:
             return result
         # if predicted intent is "I wanna travel to Shenfield and back from Norwich on Friday", "I would like a return ticket from Blackpool North to Blackpool South on 23/06/2025"
         elif predicted_intent == "get_from_x_to_y_date_return":
-            self.current_slots["type"] = "return"
             self.required_slots = self.required_slots_return
             result = self.process_get_from_x_to_y_return(input_message, predicted_intent)
             return result
-        # if predicted intent is "Friday", "23/06/2025", "tomorrow" etc.
-        
+        elif predicted_intent == "earliest_inbound" or predicted_intent == "latest_inbound" or predicted_intent == "earliest_outbound" or predicted_intent == "latest_outbound":
+            if self.current_task == "get_ticket":
+                time = self.extract_time(input_message)
+                if time:
+                    if predicted_intent == "earliest_inbound":
+                        self.current_slots["earliest inbound"] = time
+                    elif predicted_intent == "latest_inbound":
+                        self.current_slots["latest inbound"] = time
+                    elif predicted_intent == "earliest_outbound":
+                        self.current_slots["earliest outbound"] = time
+                    elif predicted_intent == "latest_outbound":
+                        self.current_slots["latest outbound"] = time
+                    return self.get_next_slot()
         elif predicted_intent == "noanswer":
             if self.current_task == "get_delay":
                 success, possible_station = self.extract_one_station(input_message)
@@ -682,6 +725,16 @@ class ChatbotAssistant:
                     elif self.previous_response == "where_destination_station":
                         self.current_slots["destination"] = possible_station
                         return self.get_next_slot()
+            elif self.current_task == "get_ticket":
+                success, possible_station = self.extract_one_station(input_message)
+                if success:
+                    if self.previous_response == "where_departure_station":
+                        self.current_slots["departure"] = possible_station
+                        return self.get_next_slot()
+                    elif self.previous_response == "where_destination_station":
+                        self.current_slots["destination"] = possible_station
+                        return self.get_next_slot()
+        
 
         
 
@@ -710,6 +763,10 @@ class ChatbotAssistant:
                 self.current_slots["departure"] = stations[0]
             if not self.current_slots["destination"] and len(stations) > 1:
                 self.current_slots["destination"] = stations[1]
+        elif stations[0] is not None and stations[1] is None:
+            self.previous_response = "is_station_departure"
+            self.temp = stations[0]
+            return f"Ok! {stations[0]} is your departure station - correct?"
     
         date = self.extract_date(input_message)
         if date:
@@ -765,6 +822,10 @@ class ChatbotAssistant:
                 self.current_slots["departure"] = stations[0]
             if not self.current_slots["destination"] and len(stations) > 1:
                 self.current_slots["destination"] = stations[1]
+        elif stations[0] is not None and stations[1] is None:
+            self.previous_response = "is_station_departure"
+            self.temp = stations[0]
+            return f"Ok! {stations[0]} is your departure station - correct?"
         else:
             return random.choice(["I'm not too sure what specific stations you mean! Could you clarify?", "Could you specify which stations you mean?"])
         dates = self.extract_date(input_message)
@@ -817,6 +878,7 @@ class ChatbotAssistant:
     def process_date(self, input_message):
         """Method that extracts date(s) from the message and sets the dates in self.current_slots appropriately"""
         dates = self.extract_date(input_message)
+        print("date = ", dates, flush = True)
         #If one date was provided and no dates have already been set, set self.current_slots["date"] and ask the user for more details
         if len(dates) == 1 and not (self.current_slots["date"] or self.current_slots["return date"]):
             self.current_slots["date"] = dates[0]

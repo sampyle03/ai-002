@@ -303,6 +303,7 @@ class ChatbotAssistant:
                 try:
                     results.remove(two_stations[1])
                 except: # called when no stations are found usually
+                    print("ahudsfdsiufdsiusf"  , flush=True)
                     return False, [None, None]
                 removed.append(two_stations[1])
                 two_stations[0] = two_stations[1]
@@ -640,10 +641,15 @@ class ChatbotAssistant:
             # If the user has entered a specific railcard
             self.current_slots["railcard"] = potential_railcard
             return self.get_next_slot()
-        elif predicted_intent == "yes" and self.previous_response == "is_station_current":
-            self.current_slots["current station"] = self.temp
-            self.temp = None
-            return f"Ok! Current station is {self.current_slots["destination"]}!\n"+self.get_next_slot()
+        elif predicted_intent == "yes":
+            if self.previous_response == "is_station_current"
+                self.current_slots["current station"] = self.temp
+                self.temp = None
+                return f"Ok! Current station is {self.current_slots["current station"]}!\n"+self.get_next_slot()
+            elif self.previous_response == "is_station_departure":
+                self.current_slots["departure"] = self.temp
+                self.temp = None
+                return f"Ok! Departure station is {self.current_slots["departure"]}!\n"+self.get_next_slot()
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response == "required_details_entered_any_other_details":
             return searchForCheapestTrain(self.current_slots)
@@ -666,7 +672,6 @@ class ChatbotAssistant:
             return result
         # if predicted intent is "I wanna travel to Shenfield and back from Norwich on Friday", "I would like a return ticket from Blackpool North to Blackpool South on 23/06/2025"
         elif predicted_intent == "get_from_x_to_y_date_return":
-            self.current_slots["type"] = "return"
             self.required_slots = self.required_slots_return
             result = self.process_get_from_x_to_y_return(input_message, predicted_intent)
             return result
@@ -774,6 +779,10 @@ class ChatbotAssistant:
                 self.current_slots["departure"] = stations[0]
             if not self.current_slots["destination"] and len(stations) > 1:
                 self.current_slots["destination"] = stations[1]
+        elif stations[0] is not None and stations[1] is None:
+            self.previous_response = "is_station_departure"
+            self.temp = stations[0]
+            return f"Ok! {stations[0]} is your departure station - correct?"
         else:
             return random.choice(["I'm not too sure what specific stations you mean! Could you clarify?", "Could you specify which stations you mean?"])
         dates = self.extract_date(input_message)

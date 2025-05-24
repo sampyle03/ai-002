@@ -43,12 +43,12 @@
         },
         {
             "tag": "new_search",
-            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "I wanna book a train", "Help me book a train please"],
+            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "Help me book another train please", "I want to book another ticket", "Help me get a new ticket", "Help me start a new search"],
             "responses": ["Sure! Let's start fresh. What do you need help with?", "Alright! Starting a new search. What can I assist you with?"]
         },
         {
             "tag": "date",
-            "patterns": ["On Monday", "On Tuesday", "On Wednesday", "On Thursday", "On Friday", "On Saturday", "On Sunday", "Next Monday", "Next Tuesday", "Next Wednesday", "Next Thursday", "Next Friday", "Next Saturday", "Next Sunday", "Tomorrow", "Today", "In X days", "In X weeks", "On 01/01/2025", "On 01-01-2025", "On 2025-01-01", "On 2025/01/01", "On X 1st, 2025", "On X 2nd, 2025", "On X 3, 2025"],
+            "patterns": ["On Monday", "On Tuesday", "On Wednesday", "On Thursday", "On Friday", "On Saturday", "On Sunday", "Next Monday", "Next Tuesday", "Next Wednesday", "Next Thursday", "Next Friday", "Next Saturday", "Next Sunday", "Tomorrow", "Today", "In X days", "In X weeks", "On 01/01/2025", "On 01-01-2025", "On 2025-01-01", "On 2025/01/01", "On Januaray 1st, 2025", "On February 2nd, 2025", "On March 3rd, 2025", "On April 4th", "On May 5th", "On June 6th", "On July 7th", "On August 8th", "On September 9th", "On October 10th", "On November 11th", "On December 12th", "13th", "14th", "15th", "16th", "17th", "18th", "19th", "20th", "21st", "22nd", "23rd", "24th", "25th", "26th", "27th", "28th", "29th", "30th"],
             "responses": ["Ok! Let's see..."]
         },
         {
@@ -56,7 +56,8 @@
             "patterns": [
                 "I want to go from X to Y on Z", "I want to travel from X to Y on Z", "Can I go from X to Y on Z?", "Book me a ticket from X to Y on Z", "I need to get from X to Y on Z", "Travel from X to Y on Z", "I want to leave X for Y on Z", "I want to visit Y from X on Z", "From X to Y on Z", "Get me from X to Y on Z",
                 "I want to go from X to Y tomorrow", "I want to travel from X to Y next week", "I want to go from X to Y today", "Is there a train from X to Y on Z?", "Are there tickets from X to Y on Z?", "Can I get from X to Y on Z?", "I want to book a train from X to Y on Z", "I need a train from X to Y on Z", "Looking for trains from X to Y on Z", "Find me a train from X to Y on Z",
-                "Show me trains from X to Y on Z", "I want to depart from X and arrive at Y on Z", "I will be leaving from X to go to Y on Z", "Going from X to Y on Z", "Train from X to Y on Z", "Tickets from X to Y on Z", "I want to book from X to Y on Z", "I want to travel to Y from X on Z", "I want to go to Y from X on Z"
+                "Show me trains from X to Y on Z", "I want to depart from X and arrive at Y on Z", "I will be leaving from X to go to Y on Z", "Going from X to Y on Z", "Train from X to Y on Z", "Tickets from X to Y on Z", "I want to book from X to Y on Z", "I want to travel to Y from X on Z", "I want to go to Y from X on Z", "I wanna travel from X to Y tomorrow", "I wanna travel from X to Y next week", 
+                "I wanna travel from X to Y today", "I want to go from X to Y on Z", "I wanna get from X to Y on Z"
             ],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
         },
@@ -76,6 +77,68 @@
                     "From X to Y on Tuesday, back on Thursday", "Can I get a return from X to Y, out on date, back on date", "Return journey from X to Y, leaving on date, returning on date", "Book a return ticket from X to Y, outbound on date, inbound on date", "I want to go from X to Y on date and then return on date", "Round trip from X to Y, depart on date, return on date", "I want to leave X for Y on date and return on date", "Get me a return ticket from X to Y for date, coming back on date"
                 ],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
+        },
+        {
+            "tag": "single",
+            "patterns": [
+                "single", "single please", "Just a single"
+            ],
+            "responses": ["Single it is.", "One way ticket", "Cool beans"]
+        },
+        {
+            "tag": "return",
+            "patterns": [
+                "return", "return please", "Just a return", "I would like a return ticket", "round trip", "return"
+            ],
+            "responses": ["Return it is.", "Round trip ticket", "Cool beans"]
+        },
+        {
+            "tag": "no",
+            "patterns": [
+                "no", "no thanks", "not really", "nope", "nah"
+            ],
+            "responses": ["Alright, let me know if you need anything else.", "No problem! If you have any other questions, feel free to ask.", "Got it! If you change your mind, I'm here to help."]
+        },
+        {
+            "tag": "yes",
+            "patterns": [
+                "yes", "yeah", "ye", "yup", "indeed", "correct"
+            ],
+            "responses": ["OK!"]
+        },
+        {
+            "tag": "railcard",
+            "patterns": [
+                "16-17 Saver", "16-25 Railcard", "18 Saver - Transport for Wales", "26-30 Railcard", "Annual Gold Card Record Card", "Cambrian Railcard", "Club 50 Web - ScotRail", "Dales Railcard", "Devon & Cornwall Gold Card", "Devon & Cornwall Railcard", "Disabled Persons Railcard", "Esk Valley Railcard", "Family & Friends Railcard", "GroupSave", "Heart of Wales Railcard", "Highland Railcard", "HM Forces Railcard", "Jobcentre Plus Travel Discount Card", "MyCumbria Card", "Network Railcard", "North Lincolnshire Concessionary 34%", "North Lincolnshire Concessionary 50%", "Pembrokeshire Railcard", "Rhondda Railcard", "Senior Railcard", "South Yorkshire 16-18 Zoom Travel Pass", "Student Railcard - Transport for Wales", "Two Together Railcard", "Valleys Senior Railcard", "Valleys Student Railcard", "Veterans Railcard", "West Yorkshire Disabled Concessionary Discount", "West Yorkshire MetroRover Permit", "West Yorkshire Senior Concessionary Discount", "No Railcard", "I don't have a railcard", "Rail card", "Discount Card"
+            ],
+            "responses": ["This railcard will be applied!", "Great! I'll use that!"]
+        },
+        {
+            "tag": "adult_passengers",
+            "patterns": ["One adult passenger ticket", "1 adult please", "Two adult passenger tickets", "2 adults please", "Three adult passenger tickets", "3 adult please", "Four adult passenger tickets", "4 adults please", "Five adult passenger tickets", "5 adult please"],
+            "responses": ["Adult passenger tickets it is!", "Adult tickets coming right up!", "Got it! Adult tickets for you."]
+        },
+        {
+            "tag": "child_passengers",
+            "patterns": ["One child passenger ticket", "1 child please", "Two child passenger tickets", "2 children please", "Three child passenger tickets", "3 children please", "Four child passenger tickets", "4 children please", "Five child passenger tickets", "5 children please"],
+            "responses": ["Child passenger tickets it is!", "Child tickets coming right up!", "Got it! Child tickets for you."]
+        },
+        {
+            "tag": "get_delay_from_x_to_y",
+            "patterns": ["My train is delayed. I am going to station X, and I am at station Y. It was meant to arrive at Z, but it is delayed by K minutes. When will my train arrive?", "Help - this train I am on has a delay and I am at station Y. The time is X. When will my train arrive?"],
+            "responses": ["I can help you with that! Please provide me with the train number and the station you're at.", "Sure! I can assist you. Please let me know the train number and your current station."]
+        },
+        {
+            "tag": "time",
+            "patterns": ["01:12", "03:45", "06:17", "08:28", "09:34", "o'clock", "midnight", "noon", "12:00", "23:59", "15:30", "18:45", "20:15"],
+            "responses": ["Time set!", "Got it! Time noted.", "Time is set!"]
+        },
+        {
+            "tag": "current_delay",
+            "patterns": ["1 second", "1 minute", "1 hour", "one second", "one minute", "one hour", "2 minutes", "3 hours", "4 seconds", "5 minutes", "6 hours", "7 seconds", "8 minutes", "9 hours", "10 seconds", "11 minutes", "12 hours", "13 seconds", "14 minutes", "15 hours", "16 seconds", 
+            "17 minutes", "18 hours", "19 seconds", "20 minutes", "21 hours", "three seconds", "three minutes", "three hours", "four seconds", "four minutes", "four hours", "five seconds", "five minutes", "five hours", "six seconds", "six minutes", "six hours", "seven seconds", "seven minutes", 
+            "seven hours", "eight seconds", "eight minutes", "eight hours", "nine seconds", "nine minutes", "nine hours"],
+            "responses": ["Delay set!", "Got it! Delay noted.", "Delay is set!"]
         }
     ]
 }

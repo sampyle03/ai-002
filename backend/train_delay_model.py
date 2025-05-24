@@ -546,12 +546,12 @@ class TrainDelayModel:
 def train_delay_model():
     """Train the delay prediction model using available data files."""
     data_files = [
-        "2022_service_details_London_to_Norwich.csv",
-        "2022_service_details_Norwich_to_London.csv",
-        "2023_service_details_London_to_Norwich.csv", 
-        "2023_service_details_Norwich_to_London.csv",
-        "2024_service_details_London_to_Norwich.csv",
-        "2024_service_details_Norwich_to_London.csv",
+        "data/2022_service_details_London_to_Norwich.csv",
+        "data/2022_service_details_Norwich_to_London.csv",
+        "data/2023_service_details_London_to_Norwich.csv", 
+        "data/2023_service_details_Norwich_to_London.csv",
+        "data/2024_service_details_London_to_Norwich.csv",
+        "data/2024_service_details_Norwich_to_London.csv",
     ]
     
     # Filter out duplicate files

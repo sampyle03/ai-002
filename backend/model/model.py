@@ -642,7 +642,7 @@ class ChatbotAssistant:
             self.current_slots["railcard"] = potential_railcard
             return self.get_next_slot()
         elif predicted_intent == "yes":
-            if self.previous_response == "is_station_current"
+            if self.previous_response == "is_station_current":
                 self.current_slots["current station"] = self.temp
                 self.temp = None
                 return f"Ok! Current station is {self.current_slots["current station"]}!\n"+self.get_next_slot()

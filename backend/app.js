@@ -27,7 +27,7 @@ app.listen(port, () => {
 });
 
 async function sendMessage(text) {
-    const res = await fetch("http://localhost:5000/chat", {
+    const res = await fetch("http://127.0.0.1:5000/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text })
@@ -45,4 +45,10 @@ app.post('/chat', (req,res) => {
         console.error("Error:", error);
         res.status(500).json({ message: "Internal Server Error" });
     });
+});
+
+app.get('/get-results', async (req, res) => {
+    const response = await fetch("http://127.0.0.1:5000/get-results");
+    const data = await response.json();
+    res.json({ message: data.message });
 });

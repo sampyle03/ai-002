@@ -32,8 +32,7 @@ class TicketFinder():
     # Step 1: Change __init__ to take in a return date and time and a Type parameter (single or return)
     # Step 2: For returns, set Earliest and latest so that both time frames are covered
     # Step 3: Edit Parse_Journey_Data so that if the journey is a return, it gets the return journey details as well
-    # - Make getter methods that return the fastest, cheapest, earliest, latest journeys. as well as methods that return lists of journeys sorted in the same ways.
-
+    # - Make getter methods that return the fastest, cheapest, earliest, latest journeys. as well as methods that return lists of journeys sorted in the same wa
     def __init__(self, Origin, Destination, Date, Type="single", Return_Date=None, Earliest_Outbound=(00,00), Latest_Outbound=(23,59), Earliest_Inbound=(00,00), Latest_Inbound=(23,59), Railcards=[], Adults=1, Children=None):
         
         self.Origin_Station = Origin
@@ -65,6 +64,12 @@ class TicketFinder():
     def Search(self):
         """ Method that calls self.Find_Journeys, once if the journey is a single, twice if it is a return"""
         
+        # time.sleep(10)
+        # print("cmon mush",flush=True)
+        # return [["sigma sigma on the wall"],["boy"]]
+
+        Start_Time = time.time()
+
         print("Searching for trains from", self.Origin_Station, "to", self.Destination_Station, "on", self.Date_Of_Journey_Outbound)
         self.Date_Of_Journey = self.Date_Of_Journey_Outbound
         self.Earliest_Departure = self.Earliest_Outbound
@@ -95,13 +100,35 @@ class TicketFinder():
             self.Latest_Departure = self.Latest_Inbound
             
             self.Journeys_Inbound = self.Find_Journeys()
+        
+        # End_Time = time.time()
+        # print("Time taken to find journeys:", End_Time - Start_Time)
+        # if self.Journeys_Outbound:
+        #     print("\nOutbound Journeys:")
+        #     for idx, journey in enumerate(self.Journeys_Outbound, 1):
+        #         print(f"Journey {idx}:")
+        #         for key, value in journey.items():
+        #             print(f"  {key}: {value}")
+        #     print("-" * 30)
 
+        # if self.Journeys_Inbound:
+        #     print("\nReturn Journeys:")
+        #     for idx, journey in enumerate(self.Journeys_Inbound, 1):
+        #         print(f"Journey {idx}:")
+        #         for key, value in journey.items():
+        #             print(f"  {key}: {value}")
+        #             # Show single and return price if available
+        #             if "Price" in journey:
+        #                 print(f"  Single Price: {journey['Price']}")
+        #             if "Return_Price" in journey and journey["Return_Price"] is not None:
+        #                 print(f"  Return Price: {journey['Return_Price']}")
+        #     print("-" * 30)
         return [self.Journeys_Outbound, self.Journeys_Inbound]
         
-        #remind nicola to put a plat in her hair
-
+        
     def Find_Journeys(self):
         """Method that uses a selenium web driver to scrape possible journeys that satisfy the criteria given in __init__ from the nationalrail website"""
+        
         #Initializes a chrome web driver
         WebDriver = webdriver.Chrome(options=self.Web_Driver_Config)
 
@@ -118,7 +145,8 @@ class TicketFinder():
 
         #Waits until the button used to bring up the journey planner window shows up and then clicks it (returns an empty array if this fails to happen in 5 seconds)
         try:
-            JP_Button = WebDriverWait(WebDriver,5).until(EC.element_to_be_clickable((By.XPATH, '//*[@data-testid="jp-preview-btn"]')))
+            JP_Button = WebDriverWait(WebDriver,5).until(EC.element_to_be_clickable((By.XPATH, '//*[@aria-label="Plan Your Journey"]')))
+            #JP_Button = WebDriverWait(WebDriver,5).until(EC.element_to_be_clickable((By.XPATH, '//*[@data-testid="jp-preview-btn"]')))
         except:
             print("ERROR: Unable to locate the journey planner button")
             return []
@@ -144,7 +172,6 @@ class TicketFinder():
                 #time.sleep(1)
                 Search_Hour += 1
                 Incremented_Time = [Search_Hour, self.Earliest_Departure[1]]
-                print("sigma")
                 self.Populate_Earliest_Time(WebDriver, Incremented_Time)
                 #Clicks the search button
                 Search_Button = WebDriver.find_element(By.ID, "button-jp")  
@@ -297,7 +324,8 @@ class TicketFinder():
         Origin_Field = WebDriver.find_element(By.ID, "jp-origin")
         Destination_Field = WebDriver.find_element(By.ID, "jp-destination")
         Date_Menu = WebDriver.find_element(By.ID, "leaving-date")
-        Railcard_Button = WebDriver.find_element(By.XPATH, '//*[@data-testid="rail-card-button-initial"]')
+        #Railcard_Button = WebDriver.find_element(By.XPATH, '//*[@data-testid="rail-card-button-initial"]')
+        Railcard_Button = WebDriver.find_element(By.XPATH, '//*[@aria-label="Add railcard"]')
         Adults_Field = WebDriver.find_element(By.ID, "adults")
         Children_Field = WebDriver.find_element(By.ID, "children")
 
@@ -319,11 +347,13 @@ class TicketFinder():
         #Fills out the adult and child fields if they require changing
         if self.Adult_Passengers != 1:
             Adults_Field.click()
-            Adults_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{self.Adult_Passengers}' and contains(@data-testid, 'adults')]")
+            Adults_Option = Adults_Field.find_element(By.XPATH, f".//option[@value='{self.Adult_Passengers}']")
+            #Adults_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{self.Adult_Passengers}' and contains(@data-testid, 'adults')]")
             Adults_Option.click()
         if self.Child_Passengers != None:
             Children_Field.click()
-            Children_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{self.Child_Passengers}' and contains(@data-testid, 'children')]")
+            Children_Option = Children_Field.find_element(By.XPATH, f".//option[@value='{self.Child_Passengers}']")
+            #Children_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{self.Child_Passengers}' and contains(@data-testid, 'children')]")
             Children_Option.click()
         
         #Fills out the railcard field if it requires changing
@@ -336,7 +366,8 @@ class TicketFinder():
             Railcard_Button.click()
             Railcard_Menu = WebDriver.find_element(By.ID, "railcard-0")
             Railcard_Menu.click()
-            Railcard_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{self.Railcards[0]}' and contains(@data-testid, 'railcard')]")
+            Railcard_Option = Railcard_Menu.find_element(By.XPATH, f"//option[@value='{self.Railcards[0]}']") 
+            #Railcard_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{self.Railcards[0]}' and contains(@data-testid, 'railcard')]")
             Railcard_Option.click()
             #Loops through any additional railcards and adds them
             if len(self.Railcards) > 1:
@@ -351,17 +382,20 @@ class TicketFinder():
                         WebDriver.execute_script("arguments[0].scrollIntoView({block: 'center'});", Added_Railcards[Railcard]["Counter Dropdown"])
                         time.sleep(0.5)
                         Added_Railcards[Railcard]["Counter Dropdown"].click()
-                        Count_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{Added_Railcards[Railcard]['Count']+1}' and contains(@data-testid, 'railcard-{Added_Railcards[Railcard]['Added Railcard Number']}-count')]")
+                        Count_Option = Added_Railcards[Railcard]["Counter Dropdown"].find_element(By.XPATH, f".//option[@value='{Added_Railcards[Railcard]['Count']+1}']")
+                        #Count_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{Added_Railcards[Railcard]['Count']+1}' and contains(@data-testid, 'railcard-{Added_Railcards[Railcard]['Added Railcard Number']}-count')]")
                         Count_Option.click()
                         Added_Railcards[Railcard]["Count"] += 1
                     else:    
-                        Add_Railcard_Button = WebDriver.find_element(By.XPATH, '//*[@data-testid="rail-card-button-additional"]')
+                        #Add_Railcard_Button = WebDriver.find_element(By.XPATH, '//*[@data-testid="rail-card-button-additional"]')
+                        Add_Railcard_Button = WebDriver.find_element(By.XPATH, '//*[@arua-label="Add another railcard"]')
                         WebDriver.execute_script("arguments[0].scrollIntoView({block: 'center'});", Add_Railcard_Button)
                         time.sleep(0.5)
                         Add_Railcard_Button.click()
                         Railcard_Menu = WebDriver.find_element(By.ID, f"railcard-{Railcard_Count}")
                         Railcard_Menu.click()
-                        Railcard_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{Railcard}' and contains(@data-testid, 'railcard-{Railcard_Count}')]")
+                        Railcard_Option = Railcard_Menu.find_element(By.XPATH, f"//option[@value='{Railcard}']")
+                        #Railcard_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{Railcard}' and contains(@data-testid, 'railcard-{Railcard_Count}')]")
                         Railcard_Option.click()
                         Added_Railcards[Railcard] = {"Counter Dropdown":WebDriver.find_element(By.ID, f"railcard-{Railcard_Count}-count"), "Count":1, "Added Railcard Number":Railcard_Count}
                         Railcard_Count += 1
@@ -418,10 +452,12 @@ class TicketFinder():
             Earliest_Time_Fields[0].click() #Hour field
             Earliest_Time_Hour_Str = str(Time[0]).zfill(2) #Converts the hour to a string and adds a 0 if needed
             #Earlies_Time_Minute_Str = str(Time[1]).zfill(2) #Converts the minute to a string and adds a 0 if needed
-            Earliest_Time_Hour_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{Earliest_Time_Hour_Str}' and contains(@data-testid, 'leaving-hour')]")
+            Earliest_Time_Hour_Option = Earliest_Time_Fields[0].find_element(By.XPATH, f".//option[@value='{Earliest_Time_Hour_Str}']")
+            #Earliest_Time_Hour_Option = WebDriver.find_element(By.XPATH, f"//option[@value='{Earliest_Time_Hour_Str}' and contains(@data-testid, 'leaving-hour')]")
             Earliest_Time_Hour_Option.click()
             Earliest_Time_Fields[1].click() #Minute field (Sets to 00 as the minute checking will be done later)
-            Earliest_Time_Minute_Option = WebDriver.find_element(By.XPATH, f"//option[@value='00' and contains(@data-testid, 'leaving-min')]")
+            Earliest_Time_Minute_Option = Earliest_Time_Fields[1].find_element(By.XPATH, ".//option[@value='00']")
+            #Earliest_Time_Minute_Option = WebDriver.find_element(By.XPATH, f"//option[@value='00' and contains(@data-testid, 'leaving-min')]")
             Earliest_Time_Minute_Option.click()
 
     def New_Journeys_Loaded(self, WebDriver, Latest_Request_ID):
@@ -520,6 +556,11 @@ class TicketFinder():
         #
 
         for journey in Response_Data_JSON["outwardJourneys"]:
+            
+            #Skip the journey if it is cancelled
+            if journey["rawStatus"] == "CANCELLED":
+                continue
+            
             id = journey["id"]
             Start_Time_RAW = journey["timetable"]["scheduled"]["departure"]
             Start_Time = datetime.fromisoformat(Start_Time_RAW).strftime("%H:%M")
@@ -545,7 +586,10 @@ class TicketFinder():
             #             Price = Journey_Element.find_element(By.XPATH, ".//div[contains(@id, 'result-card-price-outward')]/div/span[2]").text
             # #If no railcard is being used, the price can be scraped from the json data
             # else:
-            Price = min(fare["totalPrice"] for fare in journey["fares"]) #Gets lowest price in fares (in pence)
+            try:
+                Price = min(fare["totalPrice"] for fare in journey["fares"]) #Gets lowest price in fares (in pence)
+            except:
+                continue
             if self.Type == "return":
                 try:
                     Return_Price = min(fare["totalPrice"] for fare in journey["fares"] if fare["direction"] == "RETURN") 
@@ -574,7 +618,7 @@ class TicketFinder():
             if self.Type == "return":
                 Journey_Details["Return_Price"] = Return_Price
                 #Creates a unique ID based off of the Departure time and duration. 
-                Journey_Details["Return ID"] = int(Start_Time.split(":")[0])+int(Start_Time.split(":")[1])+int(Duration.split(":")[0])+int(Duration.split(":")[1]) #Unique ID for the return journey
+                #Journey_Details["Return ID"] = int(Start_Time.split(":")[0])+int(Start_Time.split(":")[1])+int(Duration.split(":")[0])+int(Duration.split(":")[1]) #Unique ID for the return journey
 
             #Ignores journeys that are not on the right date
             if Journey_Details["Departure_Date"] == self.Date_Of_Journey:
@@ -633,7 +677,7 @@ class TicketFinder():
         #self.Journeys_Data_RAW = {}
         return False
 
-    def Scrape_Journeys(self, WebDriver):
+    def Scrape_Journeys(self, WebDriver): #NOT USED 
         """Method that scrapes all of the journeys from the page and returns their details in a list. Each journey is a dictionary like: {Start_Time, Arrival_Time, Duration, Price, Direct, Rail_Replacement}"""
         Journeys = []
         
@@ -685,7 +729,30 @@ if __name__ == "__main__":
     #finder = TicketFinder("London", "Norwich", "17/05/2025",Earliest_Outbound=(19,30),Latest_Outbound=(20,00))
     #finder = TicketFinder("London", "Norwich", "21/05/2025",Earliest_Outbound=(00,30),Latest_Outbound=(23,00),Adults=1,Railcards=["TSU"])
     finder = TicketFinder("London", "Norwich", "22/05/2025", Type="return", Earliest_Inbound=(14,00),Latest_Inbound=(16,00),Return_Date="23/05/2025",Earliest_Outbound=(19,30),Latest_Outbound=(20,00),Adults=2,Railcards=["TSU"])
-    finder.Search()
+    single = TicketFinder(
+        "Norwich",
+        "London",
+        "25/05/2025",
+        Earliest_Outbound=(14,00),
+        Latest_Outbound=(16,00))
+    
+    # Return journey from Norwich to London for two adults, each with a 16-25 Saver railcard
+    return_finder = TicketFinder(
+        "Norwich",
+        "London",
+        "25/05/2025",
+        Type="return",
+        Return_Date="27/05/2025",
+        Earliest_Outbound=(14, 0),
+        Latest_Outbound=(16, 0),
+        Earliest_Inbound=(20, 0),
+        Latest_Inbound=(23, 59),
+        Adults=2,
+        Railcards=["YNG", "YNG"]  
+    )
+    
+    #single.Search()
+    #return_finder.Search()
 
 
     #Gets test json data from test.json
@@ -706,3 +773,4 @@ if __name__ == "__main__":
 #Then make method Get_Single_Journeys which returns a list of outbound journeys
 
 #If type == return, output the outbound journeys found first, make a method that takes an outbound journey (as its time) and outputs the inbound journeys found
+

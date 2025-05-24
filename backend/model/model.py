@@ -682,6 +682,15 @@ class ChatbotAssistant:
                     elif self.previous_response == "where_destination_station":
                         self.current_slots["destination"] = possible_station
                         return self.get_next_slot()
+            elif self.current_task == "get_ticket":
+                success, possible_station = self.extract_one_station(input_message)
+                if success:
+                    if self.previous_response == "where_departure_station":
+                        self.current_slots["departure"] = possible_station
+                        return self.get_next_slot()
+                    elif self.previous_response == "where_destination_station":
+                        self.current_slots["destination"] = possible_station
+                        return self.get_next_slot()
 
         
 

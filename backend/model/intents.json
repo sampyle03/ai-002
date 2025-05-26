@@ -124,11 +124,6 @@
             "responses": ["Child passenger tickets it is!", "Child tickets coming right up!", "Got it! Child tickets for you."]
         },
         {
-            "tag": "get_delay_from_x_to_y",
-            "patterns": ["My train is delayed. I am going to station X, and I am at station Y. It was meant to arrive at Z, but it is delayed by K minutes. When will my train arrive?", "Help - this train I am on has a delay and I am at station Y. The time is X. When will my train arrive?"],
-            "responses": ["I can help you with that! Please provide me with the train number and the station you're at.", "Sure! I can assist you. Please let me know the train number and your current station."]
-        },
-        {
             "tag": "time",
             "patterns": ["01:12", "03:45", "06:17", "08:28", "09:34", "o'clock", "midnight", "noon", "12:00", "23:59", "15:30", "18:45", "20:15"],
             "responses": ["Time set!", "Got it! Time noted.", "Time is set!"]
@@ -139,6 +134,56 @@
             "17 minutes", "18 hours", "19 seconds", "20 minutes", "21 hours", "three seconds", "three minutes", "three hours", "four seconds", "four minutes", "four hours", "five seconds", "five minutes", "five hours", "six seconds", "six minutes", "six hours", "seven seconds", "seven minutes", 
             "seven hours", "eight seconds", "eight minutes", "eight hours", "nine seconds", "nine minutes", "nine hours"],
             "responses": ["Delay set!", "Got it! Delay noted.", "Delay is set!"]
+        },
+        {
+        "tag": "delay_noted",
+        "patterns": ["45 minutes", "20 minutes", "1 hour", "30 mins", "delayed 15 minutes"],
+        "responses": ["Got it! Delay noted."]
+        },
+        {
+            "tag": "get_delay_from_x_to_y",
+            "patterns": [
+                "My train from X to Y is delayed", 
+                "I'm delayed from X to Y", 
+                "Train delay from X to Y", 
+                "How delayed is my train from X to Y", 
+                "Delay prediction from X to Y", 
+                "My train is running late from X to Y", 
+                "I'm stuck at X going to Y", 
+                "Train is delayed at X to Y", 
+                "Delayed train X to Y", 
+                "I'm at X going to Y and delayed", 
+                "My journey from X to Y is delayed", 
+                "Running late from X to Y",
+                "my train from london to norwich is delayed"
+            ],
+            "responses": [
+                "I can help you with delay predictions!", 
+                "Let me check the delay information for your journey.", 
+                "I'll help you calculate the expected delay."
+            ]
+        },
+        {
+            "tag": "delay_general",
+            "patterns": [
+                "My train is delayed", 
+                "Train is running late", 
+                "I'm delayed", 
+                "How long will I be delayed", 
+                "Delay prediction", 
+                "Train delay", 
+                "Running behind schedule", 
+                "Late train", 
+                "Delayed", 
+                "My train is late", 
+                "Train delay info", 
+                "Predict my delay",
+                "train delay prediction"
+            ],
+            "responses": [
+                "I can help predict your delay! Let me get some details about your journey.", 
+                "I'll help you calculate your expected delay. What's your current station?"
+            ]
         },
         {
             "tag": "earliest_inbound",

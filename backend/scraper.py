@@ -3,6 +3,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import (
+    ElementClickInterceptedException, 
+    TimeoutException, 
+    NoSuchElementException,
+    StaleElementReferenceException,
+    WebDriverException
+)
 import time
 from datetime import datetime
 import json
@@ -58,7 +65,7 @@ class TicketFinder():
 
         #Creates a selenium web driver configuration to run in headless mode (no GUI) with performance logs (allows for identifying request responses) enabled
         self.Web_Driver_Config = webdriver.ChromeOptions()
-        #self.Web_Driver_Config.add_argument("--headless")
+        self.Web_Driver_Config.add_argument("--headless")
         self.Web_Driver_Config.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
 
     def Search(self):
@@ -129,81 +136,328 @@ class TicketFinder():
     def Find_Journeys(self):
         """Method that uses a selenium web driver to scrape possible journeys that satisfy the criteria given in __init__ from the nationalrail website"""
         
-        #Initializes a chrome web driver
-        WebDriver = webdriver.Chrome(options=self.Web_Driver_Config)
-
-        #Navigates to www.nationalrail.co.uk
-        WebDriver.get("https://www.nationalrail.co.uk/")
-
-        #Waits until the button used to Accept All cookies appears on the page and then clicks it (returns an empty array if this fails to happen in 20 seconds)
+        WebDriver = None
         try:
-            Cookies_Button = WebDriverWait(WebDriver,20).until(EC.element_to_be_clickable((By.ID, 'onetrust-accept-btn-handler')))
-        except:
-            print("ERROR: Unable to locate the accept cookies button")
-            return []
-        Cookies_Button.click()
+            #Initializes a chrome web driver
+            WebDriver = webdriver.Chrome(options=self.Web_Driver_Config)
+            WebDriver.set_page_load_timeout(60)
 
-        #Waits until the button used to bring up the journey planner window shows up and then clicks it (returns an empty array if this fails to happen in 5 seconds)
-        try:
-            JP_Button = WebDriverWait(WebDriver,5).until(EC.element_to_be_clickable((By.XPATH, '//*[@aria-label="Plan Your Journey"]')))
-            #JP_Button = WebDriverWait(WebDriver,5).until(EC.element_to_be_clickable((By.XPATH, '//*[@data-testid="jp-preview-btn"]')))
-        except:
-            print("ERROR: Unable to locate the journey planner button")
-            return []
-        
-        WebDriver.execute_script("arguments[0].scrollIntoView({block: 'center'});", JP_Button)
-        time.sleep(0.5)
-        JP_Button.click()        
-        #time.sleep(1)
+            #Navigates to www.nationalrail.co.uk
+            print("Navigating to National Rail website...", flush=True)
+            WebDriver.get("https://www.nationalrail.co.uk/")
 
-        #Now that the journey planner menu has appeared, populatge it with the relevant fields and click enter
-        if not self.Populate_Journey_Planner(WebDriver):
-            print("ERROR: Unable to populate the journey planner menu")
-            return []
-        
-        #Now the available journeys should be displayed
-        #Firstly checks if there is a "We couldn't find any services for the journey you have requested. Please check your selection criteria" message
-        #If no journeys are found, increase the time by 1 hour and try again
-        Journeys_Found = False
-        Search_Hour = self.Earliest_Departure[0]
-        while not Journeys_Found:
+            #Waits until the button used to Accept All cookies appears on the page and then clicks it
+            print("Accepting cookies...", flush=True)
             try:
-                No_Journeys_Message = WebDriverWait(WebDriver,5).until(EC.presence_of_element_located((By.XPATH , '//*[contains(text(), "Please check your selection criteria.")]')))
-                #time.sleep(1)
-                Search_Hour += 1
-                Incremented_Time = [Search_Hour, self.Earliest_Departure[1]]
-                self.Populate_Earliest_Time(WebDriver, Incremented_Time)
-                #Clicks the search button
-                Search_Button = WebDriver.find_element(By.ID, "button-jp")  
-                Search_Button.click()
-                time.sleep(0.5)
+                Cookies_Button = WebDriverWait(WebDriver, 20).until(EC.element_to_be_clickable((By.ID, 'onetrust-accept-btn-handler')))
+                if not self.safe_click(WebDriver, Cookies_Button):
+                    print("Failed to accept cookies, continuing anyway", flush=True)
             except Exception as e:
-                #If the message wasnt detected, also check if any journeys with self.Date_Of_Journey are present
-                if self.Check_For_Valid_Journeys(WebDriver):
-                    #If they are, set Journeys_Found to True and break out of the loop
-                    Journeys_Found = True
-                    print("Journeys found")
-                #If they arent any valid journeys, click the edit journey and increment the time by 1 hour
-                else:
-                    try:
-                        Edit_Journey_Button = WebDriverWait(WebDriver, 5).until(EC.element_to_be_clickable((By.ID, "button-journey-planner-query")))
-                        Edit_Journey_Button.click()
-                        time.sleep(1)
-                        Search_Hour += 1
-                        Incremented_Time = [Search_Hour, self.Earliest_Departure[1]]
-                        self.Populate_Earliest_Time(WebDriver, Incremented_Time)
-                        #Clicks the search button
-                        Search_Button = WebDriver.find_element(By.ID, "button-jp")  
-                        Search_Button.click()
-                        time.sleep(3)
+                print(f"Cookie acceptance failed: {e}", flush=True)
 
-                    except Exception as e:
-                        print(f"ERROR: Unable to locate the 'Edit journey' button: {e}")
+            #Waits until the button used to bring up the journey planner window shows up and then clicks it
+            print("Opening journey planner...", flush=True)
+            try:
+                JP_Button = WebDriverWait(WebDriver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@aria-label="Plan Your Journey"]')))
+            except:
+                try:
+                    JP_Button = WebDriverWait(WebDriver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@data-testid="jp-preview-btn"]')))
+                except:
+                    print("ERROR: Unable to locate the journey planner button")
+                    return []
+            
+            WebDriver.execute_script("arguments[0].scrollIntoView({block: 'center'});", JP_Button)
+            time.sleep(0.5)
+            if not self.safe_click(WebDriver, JP_Button):
+                print("Failed to open journey planner")
+                return []
+
+            #Now that the journey planner menu has appeared, populate it with the relevant fields and click enter
+            print("Populating journey planner...", flush=True)
+            if not self.Populate_Journey_Planner(WebDriver):
+                print("ERROR: Unable to populate the journey planner menu")
+                return []
+            
+            #Now the available journeys should be displayed
+            #Firstly checks if there is a "We couldn't find any services for the journey you have requested. Please check your selection criteria" message
+            #If no journeys are found, increase the time by 1 hour and try again
+            print("Finding journeys...", flush=True)
+            Journeys_Found = False
+            Search_Hour = self.Earliest_Departure[0]
+            max_search_attempts = 3
+            search_attempts = 0
+            
+            while not Journeys_Found and search_attempts < max_search_attempts:
+                try:
+                    No_Journeys_Message = WebDriverWait(WebDriver, 10).until(EC.presence_of_element_located((By.XPATH , '//*[contains(text(), "Please check your selection criteria.")]')))
+                    print(f"No journeys found, attempt {search_attempts + 1}")
+                    search_attempts += 1
+                    
+                    if search_attempts >= max_search_attempts:
+                        print("Max search attempts reached")
+                        WebDriver.quit()
                         return []
+                    
+                    Search_Hour += 1
+                    if Search_Hour > 23:
+                        print("Reached end of day, no journeys found")
+                        WebDriver.quit()
+                        return []
+                        
+                    Incremented_Time = [Search_Hour, self.Earliest_Departure[1]]
+                    self.Populate_Earliest_Time(WebDriver, Incremented_Time)
+                    
+                    #Clicks the search button
+                    Search_Button = WebDriver.find_element(By.ID, "button-jp")
+                    if not self.safe_click(WebDriver, Search_Button):
+                        print("Failed to click search button")
+                        WebDriver.quit()
+                        return []
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    #If the message wasn't detected, check if any journeys are present
+                    if self.Check_For_Valid_Journeys(WebDriver):
+                        #If they are, set Journeys_Found to True and break out of the loop
+                        Journeys_Found = True
+                        print("Journeys found")
+                    #If there aren't any valid journeys, click the edit journey and increment the time by 1 hour
+                    else:
+                        search_attempts += 1
+                        if search_attempts >= max_search_attempts:
+                            print("Max search attempts reached")
+                            WebDriver.quit()
+                            return []
+                            
+                        try:
+                            Edit_Journey_Button = WebDriverWait(WebDriver, 5).until(EC.element_to_be_clickable((By.ID, "button-journey-planner-query")))
+                            if not self.safe_click(WebDriver, Edit_Journey_Button):
+                                print("Failed to click edit journey button")
+                                WebDriver.quit()
+                                return []
+                            time.sleep(1)
+                            
+                            Search_Hour += 1
+                            if Search_Hour > 23:
+                                print("Reached end of day, no journeys found")
+                                WebDriver.quit()
+                                return []
+                                
+                            Incremented_Time = [Search_Hour, self.Earliest_Departure[1]]
+                            self.Populate_Earliest_Time(WebDriver, Incremented_Time)
+                            
+                            #Clicks the search button
+                            Search_Button = WebDriver.find_element(By.ID, "button-jp")
+                            if not self.safe_click(WebDriver, Search_Button):
+                                print("Failed to click search button")
+                                WebDriver.quit()
+                                return []
+                            time.sleep(3)
 
-        #Next load in as many journeys as possible (Click "View more journeys" until maximum journeys reached message appears)
-        self.Load_All_Journeys(WebDriver)
+                        except Exception as e:
+                            print(f"ERROR: Unable to locate the 'Edit journey' button: {e}")
+                            WebDriver.quit()
+                            return []
+
+            #Next load in as many journeys as possible (Click "View more journeys" until maximum journeys reached message appears)
+            if not self.Load_All_Journeys_Enhanced(WebDriver):
+                print("Failed to load all journeys, but continuing with what we have")
+            
+            time.sleep(3)
+            
+            #Now that all of the journeys have been loaded, scrape the relevant details from the json data sent by the server
+            Journeys = self.Get_Journeys(WebDriver)
+            print(f"Initial journeys found: {len(Journeys)}")
+            
+            # ENHANCED: Try to load additional journeys with better error handling
+            try:
+                additional_journey_attempts = 0
+                max_additional_attempts = 2  # Limit additional attempts
+                
+                while not self.All_Journeys_Found and len(Journeys) > 0 and additional_journey_attempts < max_additional_attempts:
+                    print(f"Attempting to load more journeys (attempt {additional_journey_attempts + 1})")
+                    
+                    #Gets the time of the latest journey found so far
+                    Latest_Current_Journey_Time = Journeys[-1]["Start_Time"].split(":")
+                    print("Setting time to", Latest_Current_Journey_Time)
+                    
+                    try:
+                        # Try to click edit journey button with enhanced error handling
+                        Edit_Journey_Button = WebDriverWait(WebDriver, 5).until(EC.element_to_be_clickable((By.ID, "button-journey-planner-query")))
+                        WebDriver.execute_script("arguments[0].scrollIntoView({block: 'center'});", Edit_Journey_Button)
+                        time.sleep(2)
+                        
+                        # Try multiple click strategies
+                        click_success = False
+                        if self.safe_click(WebDriver, Edit_Journey_Button):
+                            click_success = True
+                        else:
+                            try:
+                                WebDriver.execute_script("arguments[0].click();", Edit_Journey_Button)
+                                click_success = True
+                                print("Used JavaScript click as fallback")
+                            except Exception as js_error:
+                                print(f"JavaScript click also failed: {js_error}")
+                        
+                        if not click_success:
+                            print("All click methods failed, stopping additional journey search")
+                            break
+                        
+                        time.sleep(1)
+                        self.Populate_Earliest_Time(WebDriver, Latest_Current_Journey_Time)
+                        time.sleep(0.5)
+                        
+                        #Clicks the search button
+                        Search_Button = WebDriver.find_element(By.ID, "button-jp")
+                        if not self.safe_click(WebDriver, Search_Button):
+                            try:
+                                WebDriver.execute_script("arguments[0].click();", Search_Button)
+                            except:
+                                print("Failed to click search button, stopping additional journey search")
+                                break
+
+                        #Next load in as many journeys as possible
+                        if not self.Load_All_Journeys_Enhanced(WebDriver):
+                            print("Failed to load additional journeys")
+                        
+                        time.sleep(3)
+                        
+                        #Now get the new journeys
+                        New_Journeys = self.Get_Journeys(WebDriver)
+                        
+                        #Check if we got new journeys
+                        if len(New_Journeys) > 0:
+                            # Check if the last journey is the same (indicating no new journeys)
+                            if ([New_Journeys[-1]["Start_Time"], New_Journeys[-1]["Arrival_Time"]] == 
+                                [Journeys[-1]["Start_Time"], Journeys[-1]["Arrival_Time"]]):
+                                self.All_Journeys_Found = True
+                                print("No new journeys found, stopping search")
+                            else:
+                                #Remove duplicates and add new journeys
+                                if (len(New_Journeys) > 0 and len(Journeys) > 0 and
+                                    [New_Journeys[0]["Start_Time"], New_Journeys[0]["Arrival_Time"]] == 
+                                    [Journeys[-1]["Start_Time"], Journeys[-1]["Arrival_Time"]]):
+                                    New_Journeys.pop(0)
+                                
+                                Journeys.extend(New_Journeys)
+                                print(f"Added {len(New_Journeys)} new journeys, total: {len(Journeys)}")
+                        else:
+                            self.All_Journeys_Found = True
+                            print("No new journeys returned, stopping search")
+                        
+                        additional_journey_attempts += 1
+                        
+                    except Exception as button_error:
+                        print(f"Error with additional journey loading: {button_error}")
+                        print("Continuing with journeys found so far")
+                        break
+                        
+            except Exception as additional_search_error:
+                print(f"Error in additional journey search: {additional_search_error}")
+                print("Returning initial journeys found")
+
+            #Remove duplicates
+            Journeys_No_Duplicates = []
+            if len(Journeys) > 0:
+                Journeys_No_Duplicates.append(Journeys[0])
+                for i in range(1, len(Journeys)):
+                    if (Journeys[i]["Start_Time"] != Journeys_No_Duplicates[-1]["Start_Time"] or 
+                        Journeys[i]["Arrival_Time"] != Journeys_No_Duplicates[-1]["Arrival_Time"]):
+                        Journeys_No_Duplicates.append(Journeys[i])
+
+            Journeys = Journeys_No_Duplicates
+            print(f"Final journey count after duplicate removal: {len(Journeys)}")
+
+            WebDriver.quit()
+            return Journeys
+            
+        except Exception as e:
+            print(f"Critical error in Find_Journeys: {e}")
+            import traceback
+            traceback.print_exc()
+            if WebDriver:
+                try:
+                    WebDriver.quit()
+                except:
+                    pass
+            return []
+
+    def safe_click(self, driver, element, max_retries=3):
+        """Safely click an element with multiple fallback strategies"""
+        for attempt in range(max_retries):
+            try:
+                # First, scroll element into view
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                time.sleep(0.8)
+                
+                # Wait for element to be clickable
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable(element))
+                
+                # Try normal click first
+                element.click()
+                return True
+                
+            except ElementClickInterceptedException:
+                print(f"Click intercepted on attempt {attempt + 1}, trying JavaScript click", flush=True)
+                try:
+                    # Try JavaScript click
+                    driver.execute_script("arguments[0].click();", element)
+                    time.sleep(0.5)
+                    return True
+                except Exception as js_error:
+                    print(f"JavaScript click failed: {js_error}", flush=True)
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                        continue
+                    
+            except (StaleElementReferenceException, NoSuchElementException) as stale_error:
+                print(f"Element became stale on attempt {attempt + 1}: {stale_error}", flush=True)
+                return False  # Let caller re-find the element
+                    
+            except Exception as e:
+                print(f"Unexpected error clicking element on attempt {attempt + 1}: {e}", flush=True)
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
         
+        print(f"Failed to click element after {max_retries} attempts", flush=True)
+        return False
+
+    def Load_All_Journeys_Enhanced(self, WebDriver):
+        """Enhanced journey loading with timeout protection"""
+        try:
+            max_load_attempts = 8
+            load_attempts = 0
+            
+            while load_attempts < max_load_attempts:
+                try:
+                    # Look for "View later trains" button
+                    view_more_buttons = WebDriver.find_elements(By.XPATH, "//button[@aria-label = 'View later trains']")
+                    
+                    if not view_more_buttons:
+                        print("No more 'View More' button found")
+                        break
+                    
+                    button = view_more_buttons[0]
+                    if not self.safe_click(WebDriver, button):
+                        print("Failed to click View More button")
+                        break
+                    
+                    # Wait for new content to load
+                    time.sleep(3)
+                    load_attempts += 1
+                    
+                except Exception as e:
+                    print(f"Error loading more journeys: {e}")
+                    break
+            
+            print(f"Loaded journeys with {load_attempts} View More clicks")
+            return True
+            
+        except Exception as e:
+            print(f"Error in Load_All_Journeys_Enhanced: {e}")
+            return False
+            
         #If lookinng for journeys with railcards, prices need to be scraped directly from the page as the json data does not account for railcards, therefore the scraper needs to wait for all the journeys to appear on the page before scraping
         # if self.Railcards != []:
         #     #Identify the number of journey elements on the page

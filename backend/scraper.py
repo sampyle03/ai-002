@@ -135,7 +135,8 @@ class TicketFinder():
         
     def Find_Journeys(self):
         """Method that uses a selenium web driver to scrape possible journeys that satisfy the criteria given in __init__ from the nationalrail website"""
-        
+        if hasattr(self.Date_Of_Journey, 'strftime'):
+            self.Date_Of_Journey = self.Date_Of_Journey.strftime("%d/%m/%Y")
         WebDriver = None
         try:
             #Initializes a chrome web driver

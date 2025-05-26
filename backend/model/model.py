@@ -1036,7 +1036,8 @@ class ChatbotAssistant:
         """
         args = {"Origin": Details["departure"],
                 "Destination": Details["destination"],
-                "Type": Details["type"]
+                "Type": Details["type"],
+                "Date": Details["date"],
                 }
         
         if Details["earliest outbound"]:

@@ -43,7 +43,7 @@
         },
         {
             "tag": "new_search",
-            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "Help me book another train please", "another ticket", "get a new ticket", "start a new search"],
+            "patterns": ["Start over", "New search", "Reset", "Clear", "I want to start a new search", "Help me book another train please", "another ticket", "get a new ticket", "start a new search", "book a train"],
             "responses": ["Sure! Let's start fresh. What do you need help with?", "Alright! Starting a new search. What can I assist you with?"]
         },
         {
@@ -109,7 +109,19 @@
         {
             "tag": "railcard",
             "patterns": [
-                "16-17 Saver", "16-25 Railcard", "18 Saver - Transport for Wales", "26-30 Railcard", "Annual Gold Card Record Card", "Cambrian Railcard", "Club 50 Web - ScotRail", "Dales Railcard", "Devon & Cornwall Gold Card", "Devon & Cornwall Railcard", "Disabled Persons Railcard", "Esk Valley Railcard", "Family & Friends Railcard", "GroupSave", "Heart of Wales Railcard", "Highland Railcard", "HM Forces Railcard", "Jobcentre Plus Travel Discount Card", "MyCumbria Card", "Network Railcard", "North Lincolnshire Concessionary 34%", "North Lincolnshire Concessionary 50%", "Pembrokeshire Railcard", "Rhondda Railcard", "Senior Railcard", "South Yorkshire 16-18 Zoom Travel Pass", "Student Railcard - Transport for Wales", "Two Together Railcard", "Valleys Senior Railcard", "Valleys Student Railcard", "Veterans Railcard", "West Yorkshire Disabled Concessionary Discount", "West Yorkshire MetroRover Permit", "West Yorkshire Senior Concessionary Discount", "No Railcard", "I don't have a railcard", "Rail card", "Discount Card"
+                "16-17 Saver", "16-25 Railcard", "18 Saver - Transport for Wales", "26-30 Railcard", 
+                "Annual Gold Card Record Card", "Cambrian Railcard", "Club 50 Web - ScotRail", 
+                "Dales Railcard", "Devon & Cornwall Gold Card", "Devon & Cornwall Railcard", 
+                "Disabled Persons Railcard", "Esk Valley Railcard", "Family & Friends Railcard", 
+                "GroupSave", "Heart of Wales Railcard", "Highland Railcard", "HM Forces Railcard", 
+                "Jobcentre Plus Travel Discount Card", "MyCumbria Card", "Network Railcard", 
+                "North Lincolnshire Concessionary 34%", "North Lincolnshire Concessionary 50%", 
+                "Pembrokeshire Railcard", "Rhondda Railcard", "Senior Railcard", 
+                "South Yorkshire 16-18 Zoom Travel Pass", "Student Railcard - Transport for Wales", 
+                "Two Together Railcard", "Valleys Senior Railcard", "Valleys Student Railcard", 
+                "Veterans Railcard", "West Yorkshire Disabled Concessionary Discount", 
+                "West Yorkshire MetroRover Permit", "West Yorkshire Senior Concessionary Discount", 
+                "No Railcard", "I don't have a railcard", "Rail card", "Discount Card"
             ],
             "responses": ["This railcard will be applied!", "Great! I'll use that!"]
         },

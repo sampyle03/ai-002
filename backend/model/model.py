@@ -625,9 +625,13 @@ class ChatbotAssistant:
         self.model.eval()
         with torch.no_grad():
             predictions = self.model(bag_tensor)
+
+        boosted_predictions = self.boost_intent_likelihood(predictions)
         predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
         print(f"Predicted intent: {predicted_intent}",flush=True)
+
+        
 
         # Handle task switching and delay intents
         if predicted_intent == "get_delay_from_x_to_y" or predicted_intent == "delay_general":
@@ -812,6 +816,26 @@ class ChatbotAssistant:
         
 
         return random.choice(self.intents_responses[predicted_intent])
+
+    def boost_intent_likelihood(self, predictions):
+        context_boost_map = {
+            "where_departure_station": {"noanswer": 5},
+            "where_destination_station": {"noanswer": 5},
+            "where_current_station": {"noanswer": 5},
+            "when_departure_journey": {"date": 3.0},
+            "when_return_journey": {"date": 3.0},
+            "is_station_current": {"yes": 5, "no": 5}
+        }
+
+        if self.previous_response in context_boost_map:
+            boosts = context_boost_map[self.previous_response]
+            for intent, boost in boosts.items():
+                if intent in self.intents:
+                    index = self.intents.index(intent)
+                    predictions[0][index] += boost
+
+        return predictions
+
     
     def process_get_from_x_to_y_date(self, input_message, predicted_intent):
         success, stations = self.extract_stations(input_message, predicted_intent)
@@ -1207,5 +1231,5 @@ if __name__ == "__main__":
     assistant.load_stations(os.path.join(os.path.dirname(__file__), "../data/stations.csv"))
     assistant.load_railcards(os.path.join(os.path.dirname(__file__), "../data/railcards.txt"))
     assistant.prepare_data()
-    assistant.train_model(batch_size=8, lr=0.001, epochs=200)
+    assistant.train_model(batch_size=8, lr=0.001, epochs=300)
     assistant.save_model(os.path.join(os.path.dirname(__file__), "../model.pth"), os.path.join(os.path.dirname(__file__), "../dimensions.json"))

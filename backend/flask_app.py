@@ -3,6 +3,15 @@ from flask_cors import CORS
 import os
 from model.model import ChatbotAssistant
 
+# Load delay model at startup
+try:
+    from train_delay_model import TrainDelayModel
+    DELAY_MODEL = TrainDelayModel.load_model("train_delay_model")
+    print("Delay prediction model loaded successfully!", flush=True)
+except:
+    DELAY_MODEL = None
+    print("Delay prediction model not available", flush=True)
+
 app = Flask(__name__)
 CORS(app)
 
@@ -11,13 +20,11 @@ intents_path = os.path.join(base, 'model/intents.json')
 model_path = os.path.join(base, 'model.pth')
 dimensions_path = os.path.join(base, 'dimensions.json')
 stations_csv = os.path.join(base, 'data/stations.csv')
-railcards_txt = os.path.join(base, 'data/railcards.txt')
 
 assistant = ChatbotAssistant(intents_path)
 assistant.parse_intents()
 assistant.load_model(model_path, dimensions_path)
 assistant.load_stations(stations_csv)
-assistant.load_railcards(railcards_txt)
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -27,7 +34,6 @@ def chat():
         return jsonify({"error": "No message found"}), 400
     
     reply = assistant.process_message(message)
-    print(reply)
     return jsonify({"reply": reply})
 
 @app.route('/get-results', methods=['GET'])

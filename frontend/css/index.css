@@ -128,8 +128,8 @@ body, html {
 }
 
 .loading-gif {
-    width: 28px;
-    height: 28px;
+    width: 35px;
+    height: 35px;
     object-fit: contain;
     margin: 4px 0 4px 0;
     display: block;

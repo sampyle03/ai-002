@@ -1,7 +1,7 @@
 """
 Chatbot developed using tutorial of https://www.youtube.com/watch?v=a040VmmO-AY&t=688s&ab_channel=NeuralNine
 """
-
+import threading
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -47,7 +47,7 @@ class ChatbotModel(nn.Module):
         return x # Output layer
 
 class ChatbotAssistant:
-    def __init__(self, intents_path, function_mappings = None):
+    def __init__(self, intents_path):
         self.model = None
         self.intents_path = intents_path
 
@@ -58,7 +58,7 @@ class ChatbotAssistant:
         self.previous_intents = []
         self.previous_response = None
 
-        self.function_mappings = function_mappings
+        #self.function_mappings = function_mappings
 
         self.X = None
         self.y = None
@@ -510,7 +510,7 @@ class ChatbotAssistant:
         return_needed = False
         if stations[0] and stations[1]:
             if not success:
-                if not self.current_slots["current station"] and not self.current_slots["destination"]:
+                if not self.current_slots_delay["current station"] and not self.current_slots_delay["destination"]:
                     message = "It seems like you mentioned one of "
                     while len(stations) > 2:
                         message += stations.pop() + ", "
@@ -520,26 +520,26 @@ class ChatbotAssistant:
                         message += stations.pop()
                     self.previous_response = "specify_which_station"
                     return(f"{message}. Please specify which of these you mean.")
-                elif not self.current_slots["current station"]:
-                    self.current_slots["current station"] = stations[0]
-                elif not self.current_slots["destination"]:
-                    self.current_slots["current station"] = stations[0]
-            if not self.current_slots["current station"]:
-                self.current_slots["current station"] = stations[0]
-            if not self.current_slots["destination"] and len(stations) > 1:
-                self.current_slots["destination"] = stations[1]
+                elif not self.current_slots_delay["current station"]:
+                    self.current_slots_delay["current station"] = stations[0]
+                elif not self.current_slots_delay["destination"]:
+                    self.current_slots_delay["destination"] = stations[1]
+            if not self.current_slots_delay["current station"]:
+                self.current_slots_delay["current station"] = stations[0]
+            if not self.current_slots_delay["destination"] and len(stations) > 1:
+                self.current_slots_delay["destination"] = stations[1]
         elif stations[0] is not None and stations[1] is None:
             self.previous_response = "is_station_current"
             self.temp = stations[0]
             return_needed = True
         
-        possible_original_arrival_time = self.extract_date(input_message)
+        possible_original_arrival_time = self.extract_time(input_message)
         if possible_original_arrival_time:
-            self.current_slots["original arrival time"] = self.extract_time(input_message)
+            self.current_slots_delay["original arrival time"] = possible_original_arrival_time
 
         possible_current_delay = self.extract_current_delay(input_message)
         if possible_current_delay:
-            self.current_slots["current delay"] = possible_current_delay
+            self.current_slots_delay["current delay"] = possible_current_delay
         
         if return_needed:
             return f"Ok! {stations[0]} is your current station - correct?"
@@ -548,50 +548,72 @@ class ChatbotAssistant:
 
 
     def get_next_slot(self):
+        if self.current_task == "get_delay":
+            return self.get_next_slot_delay()
+        else:
+            return self.get_next_slot_ticket()
+
+    def get_next_slot_ticket(self):
+        """Original get_next_slot logic for ticket booking"""
         print(self.current_slots, flush=True)
-        # self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
         count = 0
         for slot, value in self.current_slots.items():
-            if self.current_task == "get_ticket":
-                if count >= len(self.required_slots):
-                    self.previous_response = "required_details_entered_any_other_details"
-                    return random.choices(["Ok! Do you want to enter any other details?", "So then - are there any other details you'd like to tell me about your journey?", "Would you like to enter any other details about your journey?", "Do you want to enter any other details about your journey?" + "Cool! Anything else I should know?"])
-                elif value is None:
-                    if slot == "type":
-                        return "Ok! Will you require a single or return ticket?"
-                    elif slot == "date":
-                        self.previous_response = "when_departure_journey"
-                        return "Ok! And what day will be your departure date?"
-                    elif slot == "return date":
-                        self.previous_response = "when_return_journey"
-                        return "Ok! And what day will be your return date?"
-                    elif slot == "departure":
-                        self.previous_response = "where_departure_station"
-                        return "Ok! And what is your departure station?"
-                    elif slot == "destination":
-                        self.previous_response = "where_destination_station"
-                        return "Ok! And what is your destination station?"
-                    else:
-                        return f"Ok! And what is your {slot}?"
-                count += 1
-            elif self.current_task == "get_delay":
-                if count+1 >= len(self.required_slots_delay):
-                    self.previous_response = "required_details_entered_any_other_details"
-                    return getDelay(self.current_slots["current station"], self.current_slots["destination"], self.current_slots["original arrival time"], self.current_slots["current delay"])
-                elif value is None:
-                    if slot == "original arrival time":
-                        self.previous_response = "when_arrival_time"
-                        return "And what time were you originally meant to arrive?"
-                    elif slot == "current delay":
-                        self.previous_response = "current_delay"
-                        return "And how long is the current delay?"
-                    elif slot == "current station":
-                        self.previous_response = "where_current_station"
-                        return "Ok! And what is your current station?"
-                    elif slot == "destination":
-                        self.previous_response = "where_destination_station"
-                        return "And what is your destination station?"
-                count += 1
+            if count >= len(self.required_slots):
+                self.previous_response = "required_details_entered_any_other_details"
+                return "Ok! Do you want to enter any other details?"
+            elif value is None:
+                if slot == "type":
+                    return "Ok! Will you require a single or return ticket?"
+                elif slot == "date":
+                    self.previous_response = "when_departure_journey"
+                    return "Ok! And what day will be your departure date?"
+                elif slot == "return date":
+                    self.previous_response = "when_return_journey"
+                    return "Ok! And what day will be your return date?"
+                elif slot == "departure":
+                    self.previous_response = "where_departure_station"
+                    return "Ok! And what is your departure station?"
+                elif slot == "destination":
+                    self.previous_response = "where_destination_station"
+                    return "Ok! And what is your destination station?"
+                else:
+                    return f"Ok! And what is your {slot}?"
+            count += 1
+
+    def get_next_slot_delay(self):
+        """Gets the next required slot for delay calculation"""
+        print("Delay slots:", self.current_slots_delay, flush=True)
+        
+        missing_slots = []
+        for slot in self.required_slots_delay:
+            if self.current_slots_delay[slot] is None:
+                missing_slots.append(slot)
+        
+        if not missing_slots:
+            # All slots filled, calculate delay
+            return getDelay(
+                self.current_slots_delay["current station"],
+                self.current_slots_delay["destination"], 
+                self.current_slots_delay["original arrival time"],
+                self.current_slots_delay["current delay"]
+            )
+        
+        # Ask for the next missing slot
+        slot = missing_slots[0]
+        if slot == "current station":
+            self.previous_response = "where_current_station"
+            return "What station are you currently at?"
+        elif slot == "destination":
+            self.previous_response = "where_destination_station"
+            return "What's your destination station?"
+        elif slot == "original arrival time":
+            self.previous_response = "when_original_arrival"
+            return "What time were you originally scheduled to arrive? (Please use HH:MM format, e.g., 14:30)"
+        elif slot == "current delay":
+            self.previous_response = "how_long_delayed"
+            return "How many minutes is your train currently delayed?"
+        
+        return f"I need your {slot}. Could you please provide that information?"
                 
     
     def process_message(self, input_message):
@@ -607,38 +629,91 @@ class ChatbotAssistant:
         predicted_intent = self.intents[predicted_class_index]
         print(f"Predicted intent: {predicted_intent}",flush=True)
 
-        if self.current_task == "get_delay" and predicted_intent == "new_search":
-            self.current_task = "get_ticket"
-        elif predicted_intent == "get_delay_from_x_to_y" or self.current_task == "get_delay":
+        # Handle task switching and delay intents
+        if predicted_intent == "get_delay_from_x_to_y" or predicted_intent == "delay_general":
             self.current_task = "get_delay"
-        else:
-            self.current_task = "get_ticket"
-        if predicted_intent == "get_delay_from_x_to_y":
-            self.required_slots = self.required_slots_delay
-            self.current_slots = self.current_slots_delay
-            message = self.extract_info_for_delay_calculation(input_message, predicted_intent)
-            if message is not None:
-                return message
+            if predicted_intent == "get_delay_from_x_to_y":
+                message = self.extract_info_for_delay_calculation(input_message, predicted_intent)
+                if message is not None:
+                    return message
             return self.get_next_slot()
-        # if predicted intent is "Friday", "23/06/2025", "tomorrow" etc.
-        elif predicted_intent == "date":
+        elif self.current_task == "get_delay" and predicted_intent == "new_search":
+            self.current_task = "get_ticket"
+            self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": 1, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
+            self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
+            self.previous_response = None
+            return random.choice(self.intents_responses[predicted_intent])
+        elif predicted_intent != "get_delay_from_x_to_y" and predicted_intent != "delay_general":
+            if self.current_task != "get_delay":
+                self.current_task = "get_ticket"
+
+        # Handle delay-specific responses when in delay mode
+        if self.current_task == "get_delay":
+            # Handle time input for original arrival time
+            if self.previous_response == "when_original_arrival":
+                possible_time = self.extract_time(input_message)
+                if possible_time:
+                    self.current_slots_delay["original arrival time"] = possible_time
+                    return self.get_next_slot()
+                else:
+                    return "I didn't understand that time format. Please use HH:MM format (e.g., 14:30 for 2:30 PM)."
+            
+            # Handle delay amount input
+            elif self.previous_response == "how_long_delayed":
+                possible_delay = self.extract_current_delay(input_message)
+                if possible_delay is not None:
+                    self.current_slots_delay["current delay"] = possible_delay
+                    return self.get_next_slot()
+                else:
+                    return "I didn't catch how long the delay is. Please tell me in minutes (e.g., '15 minutes' or '1 hour')."
+            
+            # Handle station confirmation for delay
+            elif predicted_intent == "yes" and self.previous_response == "is_station_current":
+                self.current_slots_delay["current station"] = self.temp
+                station_name = self.temp
+                self.temp = None
+                return f"Ok! Current station is {station_name}!\n" + self.get_next_slot()
+            
+            elif predicted_intent == "no" and self.previous_response == "is_station_current":
+                self.current_slots_delay["destination"] = self.temp
+                station_name = self.temp
+                self.temp = None
+                return f"Ok! Destination is {station_name}!\n" + self.get_next_slot()
+            
+            # Handle station names when in delay mode
+            elif predicted_intent == "noanswer":
+                success, possible_station = self.extract_one_station(input_message)
+                if success:
+                    # Check what we're waiting for
+                    missing_slots = [slot for slot in self.required_slots_delay if self.current_slots_delay[slot] is None]
+                    if missing_slots:
+                        first_missing = missing_slots[0]
+                        if first_missing == "current station":
+                            self.current_slots_delay["current station"] = possible_station
+                            return self.get_next_slot()
+                        elif first_missing == "destination":
+                            self.current_slots_delay["destination"] = possible_station
+                            return self.get_next_slot()
+                # If no station found, ask for clarification
+                return "I didn't recognize that station name. Could you try again?"
+            
+            # Continue with delay flow for other intents
+            return self.get_next_slot()
+
+        if predicted_intent == "date":
             if self.current_task == "get_delay":
                 if self.previous_response == "when_arrival_time":
                     possible_original_arrival_time = self.extract_date(input_message)
                     if possible_original_arrival_time:
-                        self.current_slots["original arrival time"] = possible_original_arrival_time
+                        self.current_slots_delay["original arrival time"] = possible_original_arrival_time
             elif self.current_task == "get_ticket":
                 result = self.process_date(input_message)
                 if result:
                     return result
                 return self.get_next_slot()
-        elif predicted_intent == "current_delay":
-            if self.current_task == "get_delay":
-                possible_current_delay = self.extract_current_delay(input_message)
-                if possible_current_delay:
-                    self.current_slots["current delay"] = possible_current_delay
         elif predicted_intent == "new_search":
             self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
+            self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
             self.previous_response = None
             return random.choice(self.intents_responses[predicted_intent])
         elif predicted_intent == "adult_passengers" or predicted_intent == "child_passengers":
@@ -670,18 +745,19 @@ class ChatbotAssistant:
             if self.previous_response == "is_station_current":
                 self.current_slots["current station"] = self.temp
                 self.temp = None
-                return f"Ok! Current station is {self.current_slots["current station"]}!\n"+self.get_next_slot()
+                return f"Ok! Current station is {self.current_slots['current station']}!\n"+self.get_next_slot()
             elif self.previous_response == "is_station_departure":
                 self.current_slots["departure"] = self.temp
                 self.temp = None
-                return f"Ok! Departure station is {self.current_slots["departure"]}!\n"+self.get_next_slot()
+                return f"Ok! Departure station is {self.current_slots['departure']}!\n"+self.get_next_slot()
+
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response == "required_details_entered_any_other_details":
-            return searchForCheapestTrain(self.current_slots)
+            return self.searchForCheapestTrain(self.current_slots)
         elif predicted_intent == "no" and self.previous_response == "is_station_current":
             self.current_slots["destination"] = self.temp
             self.temp = None
-            return f"Ok! Destination is {self.current_slots["destination"]}!\n"+self.get_next_slot()
+            return f"Ok! Destination is {self.current_slots['destination']}!\n"+self.get_next_slot()
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've NOT been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response != "required_details_entered_any_other_details":
             return self.get_next_slot()
@@ -714,7 +790,8 @@ class ChatbotAssistant:
                         self.current_slots["latest outbound"] = time
                     return self.get_next_slot()
         elif predicted_intent == "noanswer":
-            if self.current_task == "get_delay":
+            if self.current_task == "get_ticket":
+                # Handle station input for ticket booking (existing functionality)
                 success, possible_station = self.extract_one_station(input_message)
                 if success:
                     if self.previous_response == "where_current_station":
@@ -732,8 +809,6 @@ class ChatbotAssistant:
                     elif self.previous_response == "where_destination_station":
                         self.current_slots["destination"] = possible_station
                         return self.get_next_slot()
-        
-
         
 
         return random.choice(self.intents_responses[predicted_intent])
@@ -780,7 +855,7 @@ class ChatbotAssistant:
             departure = self.current_slots["departure"]
             destination = self.current_slots["destination"]
             date = self.current_slots["date"]
-            # result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            # result = self.searchForCheapestTrain(self.current_slots)
             # return result
             return self.get_next_slot()
         
@@ -861,7 +936,7 @@ class ChatbotAssistant:
                 unfilled_slots.append(slot)
         if len(unfilled_slots) == 0:
             #Gets the details from self.current_slots and sends them to searchForCheapestTrain
-            result = self.function_mappings["get_from_x_to_y_date"](self.current_slots)
+            result = self.searchForCheapestTrain(self.current_slots)
             return result
 
         try:
@@ -918,58 +993,216 @@ class ChatbotAssistant:
                 return False
         return True
             
-def searchForCheapestTrain(details):
-    """
-    Function: Searches for the cheapest train from departureLoc to destinationLoc at a given time.
-    Parameters: departureLoc (str), destinationLoc (str), time (str), railcard (str, optional)
-    Returns: str - The cheapest train information.
-    """
-    departureLoc = details["departure"]
-    destinationLoc = details["destination"]
-    
-    # Convert dates to DD/MM/YYYY format if they exist
-    date = details["date"]
-    returnDate = details["return date"]
-    if date:
-        if isinstance(date, str):
+    def searchForCheapestTrain(self,Details):
+        """
+        Function: Searches for the cheapest train from departureLoc to destinationLoc at a given time.
+        Parameters: departureLoc (str), destinationLoc (str), time (str), railcard (str, optional)
+        Returns: str - The cheapest train information.
+        """
+        args = {"Origin": Details["departure"],
+                "Destination": Details["destination"],
+                "Type": Details["type"]
+                }
+        
+        if Details["earliest outbound"]:
+            args["Earliest_Outbound"] = Details["earliest outbound"]
+        if Details["latest outbound"]:
+            args["Latest_Outbound"] = Details["latest outbound"]
+        if Details["earliest inbound"]:
+            args["Earliest_Inbound"] = Details["earliest inbound"]
+        if Details["railcards"]:
+            args["Railcards"] = Details["railcards"]
+        if Details["adult passengers"]:
+            args["Adults"] = Details["adult passengers"]
+        if Details["child passengers"]:
+            args["Children"] = Details["child passengers"]
+
+        Date = Details["date"]
+        if Details["type"] == "return":
+            Return_Date = Details["return date"]
+        #Convert dates to DD/MM/YYYY
+        if isinstance(Date, str):
             try:
-                date_obj = datetime.strptime(date, "%Y-%m-%d")
-                date = date_obj.strftime("%d/%m/%Y")
-            except ValueError:
-                pass  # If already in correct format or invalid, leave as is
-    if returnDate:
-        if isinstance(returnDate, str):
-            try:
-                return_date_obj = datetime.strptime(returnDate, "%Y-%m-%d")
-                returnDate = return_date_obj.strftime("%d/%m/%Y")
+                Date_obj = datetime.strptime(Date, "%Y-%m-%d")
+                Date = Date_obj.strftime("%d/%m/%Y")
+                args["Date"] = Date
             except ValueError:
                 pass
+        if Details["return date"]:
+            if isinstance(Return_Date, str):
+                try:
+                    Return_Date_obj = datetime.strptime(Return_Date, "%Y-%m-%d")
+                    returnDate = Return_Date_obj.strftime("%d/%m/%Y")
+                    args["Return_Date"] = returnDate
+                except ValueError:
+                    pass
+    
+        self.Outbound_Journeys = []
+        self.Inbound_Journeys = []
+        #Run the scraper in a separate thread
+        thread = threading.Thread(target=self.run_scraper, args=(args,), daemon=True)
+        thread.start()
 
-    type = details["type"]
-    railcards = details["railcards"]
-    adultPassengers = details["adult passengers"]
-    childPassengers = details["child passengers"]
-    earliestOutbound = (12,00)
-    latestOutbound = (16,20)
-    earliestInbound = (10,00)
-    latestInbound = (12,20)
+        #return "Outbound Journeys: " + str(Outbound_Journeys) + "\nInbound Journeys: " + str(Inbound_Journeys)
+        #print(departureLoc, destinationLoc, date, railcard,flush=True)
+        return "Searching for train tickets..."
+        #return f"Searching for the cheapest train from {departureLoc} to {destinationLoc} on {date} with a {type} ticket. Return date: {returnDate}."
 
-    print("You want to travel from", departureLoc, "to", destinationLoc, "on", date, "with a", type, "ticket", flush=True)
-    if returnDate:
-        print("and return on", returnDate,flush=True)
+    def run_scraper(self,args):
+        """Method that runs the WebScraper and sets Outbound_Journeys and Inbound_Journeys to the results"""
+        WebScraper = TicketFinder(**args)
+        Journies = WebScraper.Search()
+        
+        if Journies == [] or Journies[0] == [] or (Journies[1] == [] and self.current_slots["type"] == "return"):
+            Output_Message = "Sorry, I couldn't find any journeys that match your criteria."
+            self.Outbound_Journeys = Output_Message
+            return
+        
+        #Gets the cheapest outbound single journey
+        Cheapest_Outbound = Journies[0][0]
+        for journey in Journies[0]:
+            if journey["Price"] < Cheapest_Outbound["Price"]:
+                Cheapest_Outbound = journey
+            
+        #Gets the fastest outbound single journey
+        Fastest = Journies[0][0]
+        for journey in Journies[0]:
+            if journey["Duration"] < Fastest["Duration"]:
+                Fastest = journey
 
-    #WebScraper = TicketFinder(departureLoc, destinationLoc, date, Return_Date=returnDate, Type=type, Earliest_Outbound=Earliest_Outbound, Latest_Outbound=Latest_Outbound, Earliest_Inbound=Earliest_Inbound, Latest_Inbound=Latest_Inbound, Railcards=railcards, Adults=adultPassengers, Children=childPassengers)
-    #Outbound_Journeys, Inbound_Journeys = WebScraper.Search()
-    #return "Outbound Journeys: " + str(Outbound_Journeys) + "\nInbound Journeys: " + str(Inbound_Journeys)
-    #print(departureLoc, destinationLoc, date, railcard,flush=True)
-    return f"Searching for the cheapest train from {departureLoc} to {destinationLoc} on {date} with a {type} ticket. Return date: {returnDate}. Using railcard: {railcards}. Earliest outbound: {earliestOutbound}. Latest outbound: {latestOutbound}. Earliest inbound: {earliestInbound}. Latest inbound: {latestInbound}. No. of Adult passengers: {adultPassengers}. No. of Child passengers: {childPassengers}."
+        if self.current_slots["type"] == "single":
+            #Output the cheapest and fasted single journeys
+            Output_Message = "I found some journeys for you!\n\n"
+            Output_Message += f"The cheapest journey you could get costs {self.convert_price(Cheapest_Outbound['Price'])}:\n" 
+            Output_Message += f"Departure Time: {Cheapest_Outbound['Start_Time']}\n Arrival Time: {Cheapest_Outbound['Arrival_Time']}\n Duration: {Cheapest_Outbound['Duration']}\n\n"
+            Output_Message += f"And the fastest journey you could get takes {Fastest['Duration']}:\n"
+            Output_Message += f"Departure Time: {Fastest['Start_Time']}\n Arrival Time: {Fastest['Arrival_Time']}\n Price: {self.convert_price(Fastest['Price'])}\n\n"
+            Output_Message += f"You can book the tickets here: {Cheapest_Outbound['Link']}"
+            #display all the journeys
+            # for journey in Journies[0]:
+            #     Output_Message += f"\nPrice: {journey['Price']}, Departure Time: {journey['Start_Time']}, Arrival Time: {journey['Arrival_Time']}, Duration: {journey['Duration']}" 
+        
+        elif self.current_slots["type"] == "return":
+            #Gets the cheapest inbound single journey
+            Cheapest_Inbound = Journies[1][0]
+            for journey in Journies[1]:
+                if journey["Price"] < Cheapest_Inbound["Price"]:
+                    Cheapest_Inbound = journey
+            
+            #Gets the fastest inbound single journey
+            Fastest_Inbound = Journies[1][0]
+            for journey in Journies[1]:
+                if journey["Duration"] < Fastest_Inbound["Duration"]:
+                    Fastest_Inbound = journey
+
+            print("Cheapest Outbound", Cheapest_Outbound, flush=True)
+            print("Cheapest Inbound", Cheapest_Inbound, flush=True)
+            #Gets the cheapest return journey as two singles
+            Cheapest_Singles = Cheapest_Outbound["Price"] + Cheapest_Inbound["Price"]
+
+            #Find cheapest return price that exists in both outbound and inbound journeys
+            Sorted_Outbounds = sorted(Journies[0], key=lambda journey: journey["Return_Price"])
+            Inbound_Return_Prices = [journey["Return_Price"] for journey in Journies[1]]
+            Cheapest_Return = Sorted_Outbounds[0]
+            for journey in Sorted_Outbounds:
+                if journey["Return_Price"] in Inbound_Return_Prices:
+                    print("Found a return price",journey["Return_Price"],flush=True)
+                    Cheapest_Return = journey
+                    break
+            
+            #Whichever is lower is the price of the cheapest return journey possible, wether thats by using two singles or a just a return
+            print("Cheapest Singles", Cheapest_Singles, "Cheapest Return", Cheapest_Return["Return_Price"],flush=True)
+            if Cheapest_Singles < Cheapest_Return["Return_Price"]:
+                #Get the times of all of the return journeys that have a single price of Cheapest_Inbound
+                Cheapest_Returns = []
+                for journey in Journies[1]:
+                    if journey["Price"] == Cheapest_Inbound["Price"]:
+                        print("Appending cheapest price",journey["Price"],flush=True)
+                        Cheapest_Returns.append(journey)
+                Cheapest_Return_Singles = True
+                Cheapest_Return = Cheapest_Outbound
+
+            else:
+                Cheapest_Returns = []
+                for journey in Journies[1]:
+                    if journey["Return_Price"] == Cheapest_Return["Return_Price"]:
+                        print("Appending cheapest return price",journey["Return_Price"],flush=True)
+                        Cheapest_Returns.append(journey)
+
+
+            Output_Message = "I found some journeys for you!\n\n"
+            if Cheapest_Return_Singles:
+                Output_Message += f"The cheapest journey you could get costs {self.convert_price(Cheapest_Singles)}: (this price includes the return journey)\n" 
+            else:
+                Output_Message += f"The cheapest journey you could get costs {self.convert_price(Cheapest_Return['Return_Price'])}: (this price includes the return journey)\n" 
+            Output_Message += f"Departure Time: {Cheapest_Return['Start_Time']}\n Arrival Time: {Cheapest_Return['Arrival_Time']}\n Duration: {Cheapest_Return['Duration']}\n\n"
+            Output_Message += f"This would allow you to return at any of these times:\n"
+            for journey in Cheapest_Returns:
+                Output_Message += f"{journey['Start_Time']}\n"
+            Output_Message += f"\nAnd the fastest journey you could get takes {Fastest['Duration']} outbound:\n"
+            Output_Message += f"Departure Time: {Fastest['Start_Time']}\n Arrival Time: {Fastest['Arrival_Time']}\n Price: {self.convert_price(Fastest['Return_Price'])} (this price includes the return journey)\n\n"
+            Output_Message += f"With the fastest return journey taking {Fastest_Inbound['Duration']}:\n"
+            Output_Message += f"Departure Time: {Fastest_Inbound['Start_Time']}\n Arrival Time: {Fastest_Inbound['Arrival_Time']}\n\n"
+            Output_Message += f"You can book the tickets for any of these journeys here: {Cheapest_Outbound['Link']}"
+        self.Outbound_Journeys = Output_Message
+        self.Inbound_Journeys = Journies[1]
+
+    def convert_price(self, price):
+        """Method that converts the price from P to £x.xx"""
+        Pounds = str(price)[:-2]
+        Pence = str(price)[-2:]
+        return f"£{Pounds}.{Pence}"
+    
+    def get_journeys(self):
+        """Method that checks if the results returned by the WebScraper have been found, returns False if not, returns self.Journeys if they have"""
+        if not self.Outbound_Journeys:
+            return ""
+        else:
+            return self.Outbound_Journeys
 
 def getDelay(currentStation, destination, originalArrivalTime, currentDelay):
-    return f"Calculating delay from {currentStation} to {destination} with original arrival time {originalArrivalTime} and current delay of {currentDelay} minutes."
+    # Import the global delay model from flask_app
+    import flask_app
+    
+    if flask_app.DELAY_MODEL is None:
+        return "I'm sorry, but delay predictions are not available right now. The delay prediction model needs to be trained first."
+    
+    try:
+        from datetime import datetime
+        now = datetime.now()
+        
+        # Make the prediction using the pre-loaded model
+        prediction = flask_app.DELAY_MODEL.predict_journey(
+            current_station=currentStation,
+            destination=destination,
+            scheduled_arrival_time=originalArrivalTime,
+            current_delay=currentDelay,
+            day_of_week=now.weekday(),
+            hour_of_day=now.hour,
+            month=now.month
+        )
+        
+        if 'error' in prediction:
+            return f"I'm sorry, but I couldn't calculate the delay: {prediction['error']}"
+        
+        # Extract values for cleaner formatting
+        current_station = prediction['current_status']['station']
+        current_delay_mins = prediction['current_status']['current_delay']
+        destination_station = prediction['journey']['to']
+        new_eta = prediction['prediction']['expected_arrival_time']
+        total_delay = prediction['prediction']['total_delay_at_destination']
+        
+        # Format the response nicely
+        response = f"Based on your current delay of {current_delay_mins} minutes at {current_station}, your new expected arrival is {new_eta}, with a total delay of {total_delay:.0f} minutes when you arrive at {destination_station}."
+        
+        return response
+        
+    except Exception as e:
+        return f"Error calculating delay: {str(e)}"
 
 if __name__ == "__main__":
     intents_path = os.path.join(os.path.dirname(__file__), "intents.json")
-    assistant = ChatbotAssistant(intents_path, function_mappings={"get_from_x_to_y_date": searchForCheapestTrain})
+    assistant = ChatbotAssistant(intents_path)
     assistant.parse_intents()
     assistant.load_stations(os.path.join(os.path.dirname(__file__), "../data/stations.csv"))
     assistant.load_railcards(os.path.join(os.path.dirname(__file__), "../data/railcards.txt"))

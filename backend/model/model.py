@@ -671,11 +671,11 @@ class ChatbotAssistant:
             if self.previous_response == "is_station_current":
                 self.current_slots["current station"] = self.temp
                 self.temp = None
-                return f"Ok! Current station is {self.current_slots["current station"]}!\n"+self.get_next_slot()
+                return f"Ok! Current station is {self.current_slots['current station']}!\n"+self.get_next_slot()
             elif self.previous_response == "is_station_departure":
                 self.current_slots["departure"] = self.temp
                 self.temp = None
-                return f"Ok! Departure station is {self.current_slots["departure"]}!\n"+self.get_next_slot()
+                return f"Ok! Departure station is {self.current_slots['departure']}!\n"+self.get_next_slot()
 
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response == "required_details_entered_any_other_details":

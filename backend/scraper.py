@@ -58,7 +58,7 @@ class TicketFinder():
 
         #Creates a selenium web driver configuration to run in headless mode (no GUI) with performance logs (allows for identifying request responses) enabled
         self.Web_Driver_Config = webdriver.ChromeOptions()
-        #self.Web_Driver_Config.add_argument("--headless")
+        self.Web_Driver_Config.add_argument("--headless")
         self.Web_Driver_Config.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
 
     def Search(self):

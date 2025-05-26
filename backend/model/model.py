@@ -303,7 +303,6 @@ class ChatbotAssistant:
                 try:
                     results.remove(two_stations[1])
                 except: # called when no stations are found usually
-                    print("ahudsfdsiufdsiusf"  , flush=True)
                     return False, [None, None]
                 removed.append(two_stations[1])
                 two_stations[0] = two_stations[1]
@@ -627,7 +626,7 @@ class ChatbotAssistant:
             predictions = self.model(bag_tensor)
 
         boosted_predictions = self.boost_intent_likelihood(predictions)
-        predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
+        predicted_class_index = torch.argmax(boosted_predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
         print(f"Predicted intent: {predicted_intent}",flush=True)
 
@@ -813,6 +812,11 @@ class ChatbotAssistant:
                     elif self.previous_response == "where_destination_station":
                         self.current_slots["destination"] = possible_station
                         return self.get_next_slot()
+        elif predicted_intent == "thanks":
+            self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
+            self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
+            self.previous_response = None
+            return random.choice(self.intents_responses[predicted_intent])
         
 
         return random.choice(self.intents_responses[predicted_intent])
@@ -1025,7 +1029,7 @@ class ChatbotAssistant:
         """
         args = {"Origin": Details["departure"],
                 "Destination": Details["destination"],
-                "Type": Details["type"]
+                "Type": Details["type"],
                 }
         
         if Details["earliest outbound"]:
@@ -1042,6 +1046,7 @@ class ChatbotAssistant:
             args["Children"] = Details["child passengers"]
 
         Date = Details["date"]
+        print("Date", Date, flush=True)
         if Details["type"] == "return":
             Return_Date = Details["return date"]
         #Convert dates to DD/MM/YYYY
@@ -1050,6 +1055,7 @@ class ChatbotAssistant:
                 Date_obj = datetime.strptime(Date, "%Y-%m-%d")
                 Date = Date_obj.strftime("%d/%m/%Y")
                 args["Date"] = Date
+                print("In the try", Date, flush=True)
             except ValueError:
                 pass
         if Details["return date"]:
@@ -1058,6 +1064,7 @@ class ChatbotAssistant:
                     Return_Date_obj = datetime.strptime(Return_Date, "%Y-%m-%d")
                     returnDate = Return_Date_obj.strftime("%d/%m/%Y")
                     args["Return_Date"] = returnDate
+                    print("Return Try", returnDate, flush=True)
                 except ValueError:
                     pass
     

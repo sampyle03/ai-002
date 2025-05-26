@@ -11,3 +11,25 @@ jspm_packages/
 
 .vscode
 venv
+
+train_delay_model_LTN_CHM_COL.pkl
+train_delay_model_LTN_COL_MNG.pkl
+train_delay_model_LTN_DIS_NRW.pkl
+train_delay_model_LTN_fallback.pkl
+train_delay_model_LTN_IPS_SMK.pkl
+train_delay_model_LTN_LST_SRA.pkl
+train_delay_model_LTN_MNG_IPS.pkl
+train_delay_model_LTN_SMK_DIS.pkl
+train_delay_model_LTN_WTM_CHM.pkl
+train_delay_model_metadata.pkl
+train_delay_model_NTL_CHM_WTM.pkl
+train_delay_model_NTL_COL_CHM.pkl
+train_delay_model_NTL_DIS_SMK.pkl
+train_delay_model_NTL_fallback.pkl
+train_delay_model_NTL_IPS_MNG.pkl
+train_delay_model_NTL_MNG_COL.pkl
+train_delay_model_NTL_NRW_DIS.pkl
+train_delay_model_NTL_SMK_IPS.pkl
+train_delay_model_NTL_SNF_SRA.pkl
+train_delay_model_NTL_SRA_LST.pkl
+train_delay_model_NTL_WTM_SNF.pkl

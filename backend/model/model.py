@@ -553,31 +553,42 @@ class ChatbotAssistant:
             return self.get_next_slot_ticket()
 
     def get_next_slot_ticket(self):
-        """Original get_next_slot logic for ticket booking"""
-        print(self.current_slots, flush=True)
-        count = 0
-        for slot, value in self.current_slots.items():
-            if count >= len(self.required_slots):
-                self.previous_response = "required_details_entered_any_other_details"
-                return "Ok! Do you want to enter any other details?"
-            elif value is None:
-                if slot == "type":
-                    return "Ok! Will you require a single or return ticket?"
-                elif slot == "date":
-                    self.previous_response = "when_departure_journey"
-                    return "Ok! And what day will be your departure date?"
-                elif slot == "return date":
-                    self.previous_response = "when_return_journey"
-                    return "Ok! And what day will be your return date?"
-                elif slot == "departure":
-                    self.previous_response = "where_departure_station"
-                    return "Ok! And what is your departure station?"
-                elif slot == "destination":
-                    self.previous_response = "where_destination_station"
-                    return "Ok! And what is your destination station?"
-                else:
-                    return f"Ok! And what is your {slot}?"
-            count += 1
+        """Fixed get_next_slot logic for ticket booking"""
+        print(f"Current slots: {self.current_slots}", flush=True)
+        
+        # Ensure adult passengers is never None
+        if self.current_slots["adult passengers"] is None:
+            self.current_slots["adult passengers"] = 1
+        
+        # Check required slots
+        missing_slots = []
+        for slot in self.required_slots:
+            if self.current_slots[slot] is None:
+                missing_slots.append(slot)
+        
+        if not missing_slots:
+            # All required slots are filled
+            self.previous_response = "required_details_entered_any_other_details"
+            return "Ok! Do you want to enter any other details?"
+        
+        # Ask for the first missing slot
+        slot = missing_slots[0]
+        if slot == "type":
+            return "Ok! Will you require a single or return ticket?"
+        elif slot == "date":
+            self.previous_response = "when_departure_journey"
+            return "Ok! And what day will be your departure date?"
+        elif slot == "return date":
+            self.previous_response = "when_return_journey"
+            return "Ok! And what day will be your return date?"
+        elif slot == "departure":
+            self.previous_response = "where_departure_station"
+            return "Ok! And what is your departure station?"
+        elif slot == "destination":
+            self.previous_response = "where_destination_station"
+            return "Ok! And what is your destination station?"
+        else:
+            return f"Ok! And what is your {slot}?"
 
     def get_next_slot_delay(self):
         """Gets the next required slot for delay calculation"""

@@ -31,12 +31,32 @@ assistant.load_railcards(railcards_txt)
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
+    print("Received data:", data, flush=True)
     message = data.get("message", "")
     if not message:
         return jsonify({"error": "No message found"}), 400
     
+    newChat = data.get("new_chat", False)
+    print("new chat:", newChat, flush=True)
+    if newChat:
+        print("This is new chat", newChat, flush=True)
+        #Starts a new chat 
+        assistant.start_new_chat()
+    
     reply = assistant.process_message(message)
+    #Saves the response message to the SQL
+    assistant.update_chat_messages(["chatbot",reply])
     return jsonify({"reply": reply})
+
+@app.route('/get-chats', methods=['GET'])
+def get_chats():
+    chats = assistant.get_chats()
+    return jsonify({"chats": chats})
+
+@app.route('/get-messages/<int:chat_id>', methods=['GET'])
+def get_messages(chat_id):
+    messages = assistant.get_messages(chat_id)
+    return jsonify({"messages": messages})
 
 @app.route('/get-results', methods=['GET'])
 def get_results():

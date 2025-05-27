@@ -1,11 +1,57 @@
 // index.js
+let newChat = true;
+
+async function getChats() {
+    // Populate the previous chats sidebar
+    const chatButtons = document.getElementById("chat-buttons");
+    const ChatContainer = document.querySelector(".chat-container");
+    const res = await fetch("/get-chats");
+    const data = await res.json();
+    chatButtons.innerHTML = ""; // Clear old buttons
+    data.chats.forEach(chat => {
+        // chat is [id, first_message]
+        const btn = document.createElement("button");
+        btn.setAttribute("data-chat-id", chat[0]);
+        btn.title = chat[1][1];
+        btn.textContent = chat[1][1].substring(0, 25) + "...";
+        btn.addEventListener("click", async (e) => {
+            newChat = false; 
+            const chatID = chat[0];
+            // fetches the messages for the selected chat
+            const response = await fetch(`/get-messages/${chatID}`);
+            const data = await response.json();
+            const messages = data.messages;
+            // Clears the chat container
+            ChatContainer.innerHTML = "";
+            // Appends each message to the chat container
+            messages.forEach(message => {
+                const p = document.createElement("p");
+                if (message[0] === "user") {
+                    p.className = `chat-message user-message`;
+                    p.textContent = message[1];
+                } else {
+                    p.className = `chat-message ai-chat-message`;
+                    p.textContent = message[1];
+                }
+                ChatContainer.appendChild(p);
+            });
+            // Scroll to bottom after loading messages
+            ChatContainer.scrollTop = ChatContainer.scrollHeight;
+        });
+        chatButtons.appendChild(btn);
+    });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const UserInputForm = document.getElementById("chat-form");
     const UserInput = document.getElementById("user-input");
     const ChatContainer = document.querySelector(".chat-container");
     const SendButton = document.querySelector("#chat-form button");
-    
+    const sidebar = document.getElementById("sidebar");
+
+    //Populate the previous chats sidebar
+    getChats();
+
     UserInputForm.addEventListener("submit", async (e) => {
         //Stops the page from reloading when the form submits
         e.preventDefault();
@@ -32,9 +78,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ message: userMessage }),
+                body: JSON.stringify({ message: userMessage, new_chat: newChat }),
             });
             
+            //If newChat is True, run getChats() to update the previous chats sidebar so that it includes the new chat
+            if (newChat) {
+                console.log("New chat started, updating chat list...");
+                getChats();
+                newChat = false;
+            }
 
             //await new Promise(resolve => setTimeout(resolve, 5000));
             const ResponseData = await response.json();
@@ -115,4 +167,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    const newChatBtn = document.getElementById("new-chat-btn");
+    if (newChatBtn) {
+        newChatBtn.addEventListener("click", () => {
+            window.location.reload();
+        });
+    }
+
 });
+        

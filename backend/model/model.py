@@ -20,6 +20,7 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.util import ngrams
+import psycopg2
 try:
     from scraper import TicketFinder
 except:
@@ -57,7 +58,7 @@ class ChatbotAssistant:
         self.intents_responses = {}
         self.previous_intents = []
         self.previous_response = None
-
+        self.current_chat = False #Variable to keep track of the current chat
         #self.function_mappings = function_mappings
 
         self.X = None
@@ -627,6 +628,12 @@ class ChatbotAssistant:
                 
     
     def process_message(self, input_message):
+        #Checks if a chat is ongoing, if not, create a new chat
+        if not self.current_chat:
+            self.current_chat = self.create_new_chat(["chatbot","Welcome to Train Talk! How can I help?"]) #This will create a new chat in the DB and return the new chat id
+            self.update_chat_messages(["user", input_message])
+        else:
+            self.update_chat_messages(["user", input_message])
         words = self.tokenize_and_lemmatize(input_message)
         bag = self.bag_of_words(words)
 
@@ -1058,7 +1065,6 @@ class ChatbotAssistant:
             args["Children"] = Details["child passengers"]
 
         Date = Details["date"]
-        print("Date", Date, flush=True)
         if Details["type"] == "return":
             Return_Date = Details["return date"]
         #Convert dates to DD/MM/YYYY
@@ -1067,7 +1073,6 @@ class ChatbotAssistant:
                 Date_obj = datetime.strptime(Date, "%Y-%m-%d")
                 Date = Date_obj.strftime("%d/%m/%Y")
                 args["Date"] = Date
-                print("In the try", Date, flush=True)
             except ValueError:
                 pass
         if Details["return date"]:
@@ -1076,7 +1081,6 @@ class ChatbotAssistant:
                     Return_Date_obj = datetime.strptime(Return_Date, "%Y-%m-%d")
                     returnDate = Return_Date_obj.strftime("%d/%m/%Y")
                     args["Return_Date"] = returnDate
-                    print("Return Try", returnDate, flush=True)
                 except ValueError:
                     pass
     
@@ -1202,6 +1206,249 @@ class ChatbotAssistant:
             return ""
         else:
             return self.Outbound_Journeys
+
+    def start_new_chat(self):
+        """Method that gets triggered when user clicks the New Chat button, this only needs to reset the current and required slots"""
+        self.current_chat = False #
+        self.current_task = None
+        self.previous_response = None ##
+        self.temp = None
+        self.required_slots = {"departure", "destination", "date", "type"} ##
+        self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": 1, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}##
+        self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
+
+    def create_new_chat(self, input_message):
+        """Method that creates a new chat"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        messages = [input_message]
+        current_slots = self.current_slots
+        required_slots = list(self.required_slots)
+        current_slots_delay = self.current_slots_delay
+        current_task = self.current_task
+        temp = self.temp
+    
+        cursor.execute(
+            """
+            INSERT INTO chats (messages, current_slots, required_slots, current_slots_delay, current_task, temp)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id;
+            """,
+        (json.dumps(messages), json.dumps(current_slots), json.dumps(required_slots), json.dumps(current_slots_delay), current_task, temp))
+        
+
+        #Gets the newly created chat id that was returned by the database
+        chat_id = cursor.fetchone()[0]
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return chat_id
+
+    def get_chats(self):
+        """Method that retrieves every chats id and title (first message) from the database"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT id, messages[1] FROM chats
+            ORDER BY id DESC;
+            """
+        )
+        chats = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return chats
+
+    def get_messages(self, chat_id):
+        """Method that retrieves the messages for a given chat_id"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT messages FROM chats
+            WHERE id = %s;
+            """,
+            (chat_id,)
+        )
+        messages = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+
+        #Updates the current and required slots for the new chat
+        self.current_slots = self.get_current_slots(chat_id)
+        self.required_slots = set(self.get_required_slots(chat_id))
+        self.current_slots_delay = self.get_current_slots_delay(chat_id)
+        self.current_task = self.get_current_task(chat_id)
+        self.temp = self.get_current_temp(chat_id)
+        #Sets self.previous_response to the last message in the chat that has the type "chatbot"
+        for msg in reversed(messages):
+            if isinstance(msg, list) and msg[0] == "chatbot":
+                self.previous_response = msg[1]
+                break
+        #Sets self.current_chat to the chat_id
+        self.current_chat = chat_id
+        return messages
+    
+    def get_current_slots(self, chat_id):
+        """Method that retrieves the current slots for a given chat_id"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT current_slots FROM chats
+            WHERE id = %s;
+            """,
+            (chat_id,)
+        )
+        current_slots = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        return current_slots
+    
+    def get_required_slots(self, chat_id):
+        """Method that retrieves the required slots for a given chat_id"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT required_slots FROM chats
+            WHERE id = %s;
+            """,
+            (chat_id,)
+        )
+        required_slots = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        return required_slots
+
+    def get_current_temp(self, chat_id):
+        """Method that retrieves the temporary variable for a given chat_id"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT temp FROM chats
+            WHERE id = %s;
+            """,
+            (chat_id,)
+        )
+        temp = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        return temp
+
+    def get_current_task(self, chat_id):
+        """Method that retrieves the current task for a given chat_id"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT current_task FROM chats
+            WHERE id = %s;
+            """,
+            (chat_id,)
+        )
+        current_task = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        return current_task
+
+    def get_current_slots_delay(self, chat_id):
+        """Method that retrieves the current slots for a given chat_id"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT current_slots_delay FROM chats
+            WHERE id = %s;
+            """,
+            (chat_id,)
+        )
+        current_slots_delay = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        return current_slots_delay
+
+    def update_current_slots(self, chat_id):
+        """Method that updates the current slots in the database"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        #Updates the current slots for the current chat
+        cursor.execute(
+            """
+            UPDATE chats
+            SET current_slots = %s
+            WHERE id = %s;
+            """,
+            (json.dumps(self.current_slots), chat_id)
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+    def update_required_slots(self, chat_id):
+        """Method that updates the required slots in the database"""
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        #Updates the required slots for the current chat
+        cursor.execute(
+            """
+            UPDATE chats
+            SET required_slots = %s
+            WHERE id = %s;
+            """,
+            (json.dumps(list(self.required_slots)), chat_id)
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+    def update_chat_messages(self,input_message):
+        """Method that updates the chat messages in the database"""
+        chat_id = self.current_chat
+        connection = self.get_db_connection()
+        cursor = connection.cursor()
+
+        #Adds the new message to the messages for the current chat
+        cursor.execute(
+            """
+            UPDATE chats
+            SET messages = messages || %s::jsonb
+            WHERE id = %s;
+            """,
+            (json.dumps([input_message]), chat_id)
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        #Checks if either current_slots or required_slots have changed, and updates them if they have
+        if self.current_slots != self.get_current_slots(chat_id):
+            self.update_current_slots(chat_id)
+        if self.required_slots != self.get_required_slots(chat_id):
+            self.update_required_slots(chat_id)
+
+
+    def get_db_connection(self):
+        """Method that returns a connection to the database"""
+        return psycopg2.connect(
+            dbname="traintalk",
+            user="postgres",
+            password="admin",
+            host="localhost"
+        )
+
+
 
 def getDelay(currentStation, destination, originalArrivalTime, currentDelay):
     # Import the global delay model from flask_app

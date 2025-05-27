@@ -20,11 +20,13 @@ intents_path = os.path.join(base, 'model/intents.json')
 model_path = os.path.join(base, 'model.pth')
 dimensions_path = os.path.join(base, 'dimensions.json')
 stations_csv = os.path.join(base, 'data/stations.csv')
+railcards_txt = os.path.join(base, 'data/railcards.txt')
 
 assistant = ChatbotAssistant(intents_path)
 assistant.parse_intents()
 assistant.load_model(model_path, dimensions_path)
 assistant.load_stations(stations_csv)
+assistant.load_railcards(railcards_txt)
 
 @app.route('/chat', methods=['POST'])
 def chat():

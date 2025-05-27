@@ -1,13 +1,11 @@
 
-DROP TABLE IF EXISTS posts;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS chats;
-DROP FUNCTION IF EXISTS update_updated_at_column();
+DROP TABLE IF EXISTS stations;
+DROP TABLE IF EXISTS railcards;
 
 CREATE TABLE stations (
     id SERIAL PRIMARY KEY,
-    station_name VARCHAR(50) UNIQUE NOT NULL,
-    station_code VARCHAR(255) UNIQUE NOT NULL
+    station_name VARCHAR(255) UNIQUE NOT NULL,
+    station_code VARCHAR(50) UNIQUE NOT NULL
 );
 
 CREATE TABLE railcards (

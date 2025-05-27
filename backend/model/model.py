@@ -37,7 +37,6 @@ class ChatbotModel(nn.Module):
         self.fc3 = nn.Linear(64, output_size) # Output Layer
         self.relu = nn.ReLU() # Activation function
         self.dropout = nn.Dropout(0.5) # Dropout layer to prevent overfitting
-    
 
     def forward(self, x):
         x = self.relu(self.fc1(x)) # First layer with ReLU activation
@@ -74,8 +73,6 @@ class ChatbotAssistant:
         self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
 
         self.temp = None
-
-
 
     @staticmethod
     def tokenize_and_lemmatize(text):
@@ -307,7 +304,6 @@ class ChatbotAssistant:
                 try:
                     results.remove(two_stations[1])
                 except: # called when no stations are found usually
-                    print("ahudsfdsiufdsiusf"  , flush=True)
                     return False, [None, None]
                 removed.append(two_stations[1])
                 two_stations[0] = two_stations[1]
@@ -553,37 +549,47 @@ class ChatbotAssistant:
 
     def get_next_slot(self):
         if self.current_task == "get_delay":
-            response_message = self.get_next_slot_delay()
-            return response_message
+            return self.get_next_slot_delay()
         else:
-            response_message = self.get_next_slot_ticket()
-            return response_message
+            return self.get_next_slot_ticket()
+
     def get_next_slot_ticket(self):
-        """Original get_next_slot logic for ticket booking"""
-        print(self.current_slots, flush=True)
-        count = 0
-        for slot, value in self.current_slots.items():
-            if count >= len(self.required_slots):
-                self.previous_response = "required_details_entered_any_other_details"
-                return "Ok! Do you want to enter any other details?"
-            elif value is None:
-                if slot == "type":
-                    return "Ok! Will you require a single or return ticket?"
-                elif slot == "date":
-                    self.previous_response = "when_departure_journey"
-                    return "Ok! And what day will be your departure date?"
-                elif slot == "return date":
-                    self.previous_response = "when_return_journey"
-                    return "Ok! And what day will be your return date?"
-                elif slot == "departure":
-                    self.previous_response = "where_departure_station"
-                    return "Ok! And what is your departure station?"
-                elif slot == "destination":
-                    self.previous_response = "where_destination_station"
-                    return "Ok! And what is your destination station?"
-                else:
-                    return f"Ok! And what is your {slot}?"
-            count += 1
+        """Fixed get_next_slot logic for ticket booking"""
+        print(f"Current slots: {self.current_slots}", flush=True)
+        
+        # Ensure adult passengers is never None
+        if self.current_slots["adult passengers"] is None:
+            self.current_slots["adult passengers"] = 1
+        
+        # Check required slots
+        missing_slots = []
+        for slot in self.required_slots:
+            if self.current_slots[slot] is None:
+                missing_slots.append(slot)
+        
+        if not missing_slots:
+            # All required slots are filled
+            self.previous_response = "required_details_entered_any_other_details"
+            return "Ok! Do you want to enter any other details?"
+        
+        # Ask for the first missing slot
+        slot = missing_slots[0]
+        if slot == "type":
+            return "Ok! Will you require a single or return ticket?"
+        elif slot == "date":
+            self.previous_response = "when_departure_journey"
+            return "Ok! And what day will be your departure date?"
+        elif slot == "return date":
+            self.previous_response = "when_return_journey"
+            return "Ok! And what day will be your return date?"
+        elif slot == "departure":
+            self.previous_response = "where_departure_station"
+            return "Ok! And what is your departure station?"
+        elif slot == "destination":
+            self.previous_response = "where_destination_station"
+            return "Ok! And what is your destination station?"
+        else:
+            return f"Ok! And what is your {slot}?"
 
     def get_next_slot_delay(self):
         """Gets the next required slot for delay calculation"""
@@ -609,7 +615,7 @@ class ChatbotAssistant:
             self.previous_response = "where_current_station"
             return "What station are you currently at?"
         elif slot == "destination":
-            self.previous_response = "where_destination"
+            self.previous_response = "where_destination_station"
             return "What's your destination station?"
         elif slot == "original arrival time":
             self.previous_response = "when_original_arrival"
@@ -636,9 +642,13 @@ class ChatbotAssistant:
         self.model.eval()
         with torch.no_grad():
             predictions = self.model(bag_tensor)
-        predicted_class_index = torch.argmax(predictions, dim=1).item() # Use argmax to get the index of the predicted class
+
+        boosted_predictions = self.boost_intent_likelihood(predictions)
+        predicted_class_index = torch.argmax(boosted_predictions, dim=1).item() # Use argmax to get the index of the predicted class
         predicted_intent = self.intents[predicted_class_index]
         print(f"Predicted intent: {predicted_intent}",flush=True)
+
+        
 
         # Handle task switching and delay intents
         if predicted_intent == "get_delay_from_x_to_y" or predicted_intent == "delay_general":
@@ -653,8 +663,7 @@ class ChatbotAssistant:
             self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": 1, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
             self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
             self.previous_response = None
-            response = random.choice(self.intents_responses[predicted_intent])
-            return response
+            return random.choice(self.intents_responses[predicted_intent])
         elif predicted_intent != "get_delay_from_x_to_y" and predicted_intent != "delay_general":
             if self.current_task != "get_delay":
                 self.current_task = "get_ticket"
@@ -668,8 +677,7 @@ class ChatbotAssistant:
                     self.current_slots_delay["original arrival time"] = possible_time
                     return self.get_next_slot()
                 else:
-                    response = "I didn't understand that time format. Please use HH:MM format (e.g., 14:30 for 2:30 PM)."
-                    return response
+                    return "I didn't understand that time format. Please use HH:MM format (e.g., 14:30 for 2:30 PM)."
             
             # Handle delay amount input
             elif self.previous_response == "how_long_delayed":
@@ -678,23 +686,20 @@ class ChatbotAssistant:
                     self.current_slots_delay["current delay"] = possible_delay
                     return self.get_next_slot()
                 else:
-                    response = "I didn't understand that delay format. Please tell me in minutes (e.g., '15 minutes' or '1 hour')."
-                    return response
+                    return "I didn't catch how long the delay is. Please tell me in minutes (e.g., '15 minutes' or '1 hour')."
             
             # Handle station confirmation for delay
             elif predicted_intent == "yes" and self.previous_response == "is_station_current":
                 self.current_slots_delay["current station"] = self.temp
                 station_name = self.temp
                 self.temp = None
-                response = f"Ok! Current station is {station_name}!\n" + self.get_next_slot()
-                return response
+                return f"Ok! Current station is {station_name}!\n" + self.get_next_slot()
             
             elif predicted_intent == "no" and self.previous_response == "is_station_current":
                 self.current_slots_delay["destination"] = self.temp
                 station_name = self.temp
                 self.temp = None
-                response = f"Ok! Destination is {station_name}!\n" + self.get_next_slot()
-                return response
+                return f"Ok! Destination is {station_name}!\n" + self.get_next_slot()
             
             # Handle station names when in delay mode
             elif predicted_intent == "noanswer":
@@ -711,8 +716,7 @@ class ChatbotAssistant:
                             self.current_slots_delay["destination"] = possible_station
                             return self.get_next_slot()
                 # If no station found, ask for clarification
-                response = "I didn't recognize that station name. Could you try again?"
-                return response
+                return "I didn't recognize that station name. Could you try again?"
             
             # Continue with delay flow for other intents
             return self.get_next_slot()
@@ -732,8 +736,7 @@ class ChatbotAssistant:
             self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
             self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
             self.previous_response = None
-            response = random.choice(self.intents_responses[predicted_intent])
-            return response
+            return random.choice(self.intents_responses[predicted_intent])
         elif predicted_intent == "adult_passengers" or predicted_intent == "child_passengers":
             self.extract_passengers(input_message)
             return self.get_next_slot()
@@ -751,8 +754,7 @@ class ChatbotAssistant:
             potential_railcard = self.extract_railcard(input_message)
             # If the user does have a railcard
             if potential_railcard == "Yes yeah ye, I do indeed have a railcard":
-                response = "Ok! Which type of railcard do you have?"
-                return response
+                return "Ok! Which type of railcard do you have?"
             # If the user does not have a railcard
             elif potential_railcard == "No, nah I've don't not got a Railcard":
                 self.current_slots["railcard"] = None
@@ -764,13 +766,11 @@ class ChatbotAssistant:
             if self.previous_response == "is_station_current":
                 self.current_slots["current station"] = self.temp
                 self.temp = None
-                response = f"Ok! Current station is {self.current_slots['current station']}!\n"+self.get_next_slot()
-                return response
+                return f"Ok! Current station is {self.current_slots['current station']}!\n"+self.get_next_slot()
             elif self.previous_response == "is_station_departure":
                 self.current_slots["departure"] = self.temp
                 self.temp = None
-                response = f"Ok! Departure station is {self.current_slots['departure']}!\n"+self.get_next_slot()
-                return response
+                return f"Ok! Departure station is {self.current_slots['departure']}!\n"+self.get_next_slot()
 
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response == "required_details_entered_any_other_details":
@@ -778,8 +778,7 @@ class ChatbotAssistant:
         elif predicted_intent == "no" and self.previous_response == "is_station_current":
             self.current_slots["destination"] = self.temp
             self.temp = None
-            reponse = f"Ok! Destination is {self.current_slots['destination']}!\n"+self.get_next_slot()
-            return reponse
+            return f"Ok! Destination is {self.current_slots['destination']}!\n"+self.get_next_slot()
         # if predicted intent is "no", "nah thanks", "nope" etc AND they've NOT been asked whether they'd like to enter any other details because they have enetered all required details
         elif predicted_intent == "no" and self.previous_response != "required_details_entered_any_other_details":
             return self.get_next_slot()
@@ -831,9 +830,34 @@ class ChatbotAssistant:
                     elif self.previous_response == "where_destination_station":
                         self.current_slots["destination"] = possible_station
                         return self.get_next_slot()
+        elif predicted_intent == "thanks":
+            self.current_slots = {"departure": None, "destination": None, "date": None, "type": None, "return date": None, "railcards": None, "adult passengers": None, "child passengers": None, "earliest inbound": None, "latest inbound": None, "earliest outbound": None, "latest outbound": None}
+            self.current_slots_delay = {"current station": None, "destination": None, "original arrival time": None, "current delay": None}
+            self.previous_response = None
+            return random.choice(self.intents_responses[predicted_intent])
         
 
         return random.choice(self.intents_responses[predicted_intent])
+
+    def boost_intent_likelihood(self, predictions):
+        context_boost_map = {
+            "where_departure_station": {"noanswer": 5},
+            "where_destination_station": {"noanswer": 5},
+            "where_current_station": {"noanswer": 5},
+            "when_departure_journey": {"date": 3.0},
+            "when_return_journey": {"date": 3.0},
+            "is_station_current": {"yes": 5, "no": 5}
+        }
+
+        if self.previous_response in context_boost_map:
+            boosts = context_boost_map[self.previous_response]
+            for intent, boost in boosts.items():
+                if intent in self.intents:
+                    index = self.intents.index(intent)
+                    predictions[0][index] += boost
+
+        return predictions
+
     
     def process_get_from_x_to_y_date(self, input_message, predicted_intent):
         success, stations = self.extract_stations(input_message, predicted_intent)
@@ -849,8 +873,7 @@ class ChatbotAssistant:
                     if len(stations) == 1:
                         message += stations.pop()
                     self.previous_response = "specify_which_station"
-                    response_message = f"{message}. Please specify which of these you mean."
-                    return response_message
+                    return(f"{message}. Please specify which of these you mean.")
                 elif not self.current_slots["departure"]:
                     self.current_slots["departure"] = stations[0]
                 elif not self.current_slots["destination"]:
@@ -1024,7 +1047,8 @@ class ChatbotAssistant:
         """
         args = {"Origin": Details["departure"],
                 "Destination": Details["destination"],
-                "Type": Details["type"]
+                "Type": Details["type"],
+                "Date": Details["date"],
                 }
         
         if Details["earliest outbound"]:
@@ -1473,5 +1497,5 @@ if __name__ == "__main__":
     assistant.load_stations(os.path.join(os.path.dirname(__file__), "../data/stations.csv"))
     assistant.load_railcards(os.path.join(os.path.dirname(__file__), "../data/railcards.txt"))
     assistant.prepare_data()
-    assistant.train_model(batch_size=8, lr=0.001, epochs=200)
+    assistant.train_model(batch_size=8, lr=0.001, epochs=300)
     assistant.save_model(os.path.join(os.path.dirname(__file__), "../model.pth"), os.path.join(os.path.dirname(__file__), "../dimensions.json"))

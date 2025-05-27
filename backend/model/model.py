@@ -566,6 +566,7 @@ class ChatbotAssistant:
         for slot in self.required_slots:
             if self.current_slots[slot] is None:
                 missing_slots.append(slot)
+        print(f"missing_slots: {missing_slots}", flush=True)
         
         if not missing_slots:
             # All required slots are filled
@@ -1383,13 +1384,20 @@ class ChatbotAssistant:
         cursor = connection.cursor()
 
         #Updates the current slots for the current chat
+        temp_current_slots = self.current_slots.copy()
+        # convert date objects to strings for JSON serialization
+        for key, value in temp_current_slots.items():
+            if isinstance(value, date):
+                temp_current_slots[key] = value.isoformat()
+            elif isinstance(value, datetime):
+                temp_current_slots[key] = value.isoformat()
         cursor.execute(
             """
             UPDATE chats
             SET current_slots = %s
             WHERE id = %s;
             """,
-            (json.dumps(self.current_slots), chat_id)
+            (json.dumps(temp_current_slots), chat_id)
         )
         connection.commit()
         cursor.close()
@@ -1444,7 +1452,7 @@ class ChatbotAssistant:
         return psycopg2.connect(
             dbname="traintalk",
             user="postgres",
-            password="admin",
+            password="password",
             host="localhost"
         )
 

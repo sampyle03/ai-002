@@ -57,7 +57,7 @@
                 "I want to go from X to Y on Z", "I want to travel from X to Y on Z", "Can I go from X to Y on Z?", "Book me a ticket from X to Y on Z", "I need to get from X to Y on Z", "Travel from X to Y on Z", "I want to leave X for Y on Z", "I want to visit Y from X on Z", "From X to Y on Z", "Get me from X to Y on Z",
                 "I want to go from X to Y tomorrow", "I want to travel from X to Y next week", "I want to go from X to Y today", "Is there a train from X to Y on Z?", "Are there tickets from X to Y on Z?", "Can I get from X to Y on Z?", "I want to book a train from X to Y on Z", "I need a train from X to Y on Z", "Looking for trains from X to Y on Z", "Find me a train from X to Y on Z",
                 "Show me trains from X to Y on Z", "I want to depart from X and arrive at Y on Z", "I will be leaving from X to go to Y on Z", "Going from X to Y on Z", "Train from X to Y on Z", "Tickets from X to Y on Z", "I want to book from X to Y on Z", "I want to travel to Y from X on Z", "I want to go to Y from X on Z", "I wanna travel from X to Y tomorrow", "I wanna travel from X to Y next week", 
-                "I wanna travel from X to Y today"
+                "I wanna travel from X to Y today", "want a train from to"
             ],
             "responses": ["Ok!", "Taking a look!", "Searching for tickets from X to Y..."]
         },
@@ -167,7 +167,7 @@
                 "I'm at X going to Y and delayed", 
                 "My journey from X to Y is delayed", 
                 "Running late from X to Y",
-                "my train from london to norwich is delayed"
+                "my train from to is delayed"
             ],
             "responses": [
                 "I can help you with delay predictions!", 

@@ -597,7 +597,7 @@ class TicketFinder():
         
         #Fills out the earliest time field
         self.Populate_Earliest_Time(WebDriver,self.Earliest_Departure)
-        time.sleep(0.25)
+        time.sleep(1)
 
         #Fills out the adult and child fields if they require changing
         if self.Adult_Passengers != 1:

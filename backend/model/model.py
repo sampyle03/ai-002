@@ -629,7 +629,9 @@ class ChatbotAssistant:
     
     def process_message(self, input_message):
         #Checks if a chat is ongoing, if not, create a new chat
+        print("self.current_chat:", self.current_chat, flush=True)
         if not self.current_chat:
+            print("Creating new chat...", flush=True)
             self.current_chat = self.create_new_chat(["chatbot","Welcome to Train Talk! How can I help?"]) #This will create a new chat in the DB and return the new chat id
             self.update_chat_messages(["user", input_message])
         else:
@@ -1307,7 +1309,7 @@ class ChatbotAssistant:
         current_slots = cursor.fetchone()[0]
         cursor.close()
         connection.close()
-        return current_slots
+        return json.dumps(current_slots)
     
     def get_required_slots(self, chat_id):
         """Method that retrieves the required slots for a given chat_id"""
@@ -1324,7 +1326,7 @@ class ChatbotAssistant:
         required_slots = cursor.fetchone()[0]
         cursor.close()
         connection.close()
-        return required_slots
+        return set(required_slots)
 
     def get_current_temp(self, chat_id):
         """Method that retrieves the temporary variable for a given chat_id"""
@@ -1375,7 +1377,7 @@ class ChatbotAssistant:
         current_slots_delay = cursor.fetchone()[0]
         cursor.close()
         connection.close()
-        return current_slots_delay
+        return json.dumps(current_slots_delay)
 
     def update_current_slots(self, chat_id):
         """Method that updates the current slots in the database"""
@@ -1434,8 +1436,10 @@ class ChatbotAssistant:
 
         #Checks if either current_slots or required_slots have changed, and updates them if they have
         if self.current_slots != self.get_current_slots(chat_id):
+            print("Updating current slots",self.current_slots,self.get_current_slots(chat_id), flush=True)
             self.update_current_slots(chat_id)
         if self.required_slots != self.get_required_slots(chat_id):
+            print("Updating required slots",self.required_slots,self.get_required_slots(chat_id), flush=True)
             self.update_required_slots(chat_id)
 
 

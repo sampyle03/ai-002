@@ -13,5 +13,3 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'traintalk_db')\gexec
 
 
 \c traintalk_db; 
-
-https://www.youtube.com/watch?v=fjH-3MNY94k&pp=ygUGI21hd3Ro
